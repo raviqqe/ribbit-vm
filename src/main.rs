@@ -105,7 +105,7 @@ fn symbol_ref(env: &mut Environment, n: Object) -> usize {
 }
 
 fn get_operand(environment: &mut Environment, object: Object) -> Object {
-    let rib_object = if !is_rib(&object) {
+    let rib = if !is_rib(&object) {
         Object::Rib(list_tail(
             environment,
             unwrap_object(&environment.stack) as usize,
@@ -115,7 +115,7 @@ fn get_operand(environment: &mut Environment, object: Object) -> Object {
         object
     };
 
-    get_rib(environment, rib_object).fields[0]
+    get_rib(environment, rib).fields[0]
 }
 
 fn proc(environment: &mut Environment) -> Object {
