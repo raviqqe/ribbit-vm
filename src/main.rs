@@ -23,14 +23,17 @@ const SINGLETON_TAG: Object = tag_number(5);
 const INSTR_APPLY: i64 = 0;
 const INSTR_SET: i64 = 1;
 const INSTR_GET: i64 = 2;
-const INSTR_CONST: i64 = 3;
+const INSTR_CONSTANT: i64 = 3;
 const INSTR_IF: i64 = 4;
-const INSTR_HALT: i64 = 5;
+const INSTRUCTION_HALT: i64 = 5;
 
-const EXIT_ILLEGAL_INSTRUCTION: i32 = 6;
+#[repr(i32)]
+enum ExitCode {
+    IllegalInstructtion = 6,
+}
 
-fn exit_vm(code: i32) {
-    process::exit(code);
+fn exit(code: Option<ExitCode>) {
+    process::exit(code.map(|code| code as i32).unwrap_or(0));
 }
 
 const fn tag_number(num: i64) -> Object {
@@ -378,17 +381,17 @@ fn decode(env: &mut Environment) {
     env.pc = get_tag(env, tag);
 }
 
-fn setup_stack(env: &mut Environment) {
-    push2(env, NUMBER_0, PAIR_TAG);
-    push2(env, NUMBER_0, PAIR_TAG);
+fn setup_stack(environment: &mut Environment) {
+    push2(environment, NUMBER_0, PAIR_TAG);
+    push2(environment, NUMBER_0, PAIR_TAG);
 
-    let first = get_cdr(env, env.stack);
-    env.heap[get_cdr_index(env.stack)] = NUMBER_0;
-    env.heap[get_tag_index(env.stack)] = first;
+    let first = get_cdr(environment, environment.stack);
+    environment.heap[get_cdr_index(environment.stack)] = NUMBER_0;
+    environment.heap[get_tag_index(environment.stack)] = first;
 
-    env.heap[get_car_index(first)] = tag_number(INSTR_HALT);
-    env.heap[get_cdr_index(first)] = NUMBER_0;
-    env.heap[get_tag_index(first)] = PAIR_TAG;
+    environment.heap[get_car_index(first)] = tag_number(INSTRUCTION_HALT);
+    environment.heap[get_cdr_index(first)] = NUMBER_0;
+    environment.heap[get_tag_index(first)] = PAIR_TAG;
 }
 
 fn run(env: &mut Environment) {
@@ -400,10 +403,7 @@ fn run(env: &mut Environment) {
         println!("{}", unwrap_object(&instr) as i64);
 
         match unwrap_object(&instr) as i64 {
-            INSTR_HALT => {
-                exit_vm(0);
-            }
-
+            INSTRUCTION_HALT => exit(None),
             INSTR_APPLY => {
                 let pc_tag = unwrap_object(&get_tag(env, env.pc));
                 let jump = pc_tag == unwrap_object(&NUMBER_0);
@@ -474,7 +474,7 @@ fn run(env: &mut Environment) {
                 advance_pc(env);
             }
 
-            INSTR_CONST => {
+            INSTR_CONSTANT => {
                 let cdr_obj = get_cdr(env, env.pc);
                 push2(env, cdr_obj, PAIR_TAG);
                 advance_pc(env);
@@ -491,7 +491,7 @@ fn run(env: &mut Environment) {
             }
 
             _ => {
-                exit_vm(EXIT_ILLEGAL_INSTRUCTION);
+                exit(Some(ExitCode::IllegalInstructtion));
             }
         }
     }
@@ -741,6 +741,6 @@ fn primitive(environment: &mut Environment, no: i64) {
             let chr = unwrap_object(&x) as u8 as char;
             print!("{}", chr);
         }
-        _ => exit_vm(EXIT_ILLEGAL_INSTRUCTION),
+        _ => exit(Some(ExitCode::IllegalInstructtion)),
     }
 }
