@@ -10,6 +10,7 @@ const SPACE_SIZE: u32 = MAX_OBJECT_COUNT * RIB_FIELD_COUNT as u32;
 const HEAP_SIZE: usize = SPACE_SIZE as usize * 2;
 const HEAP_BOT: usize = 0;
 const HEAP_MID: usize = HEAP_SIZE / 2;
+#[allow(dead_code)]
 const HEAP_TOP: usize = HEAP_SIZE - 1; // Last valid index
 
 const NUM_0: Object = tag_number(0);
@@ -27,6 +28,7 @@ const INSTR_IF: i64 = 4;
 const INSTR_HALT: i64 = 5;
 
 const EXIT_ILLEGAL_INSTR: i32 = 6;
+#[allow(dead_code)]
 const EXIT_NO_MEMORY: i32 = 7;
 
 fn exit_vm(code: i32) {
@@ -558,6 +560,7 @@ fn list_lenght(env: &mut Environment, list: Object) -> Object {
 }
 
 // TODO: Finish GC
+#[allow(dead_code)]
 fn gc(env: &mut Environment) {
     let to_space = if env.alloc_limit == HEAP_MID {
         HEAP_MID
