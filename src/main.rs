@@ -165,17 +165,18 @@ fn get_byte(environment: &mut Environment) -> u8 {
 }
 
 fn get_car_index(index: Object) -> usize {
-    unwrap_object(&index).try_into().unwrap() // TODO: Check this conversion
+    // TODO: Check this conversion
+    unwrap_object(&index).try_into().unwrap() 
 }
 
 fn get_cdr_index(index: Object) -> usize {
-    (unwrap_object(&index) + 1).try_into().unwrap() // TODO: Check this
-                                                    // conversion
+    // TODO: Check this conversion
+    (unwrap_object(&index) + 1).try_into().unwrap() 
 }
 
 fn get_tag_index(index: Object) -> usize {
-    (unwrap_object(&index) + 2).try_into().unwrap() // TODO: Check this
-                                                    // conversion
+    // TODO: Check this conversion
+    (unwrap_object(&index) + 2).try_into().unwrap()
 }
 
 fn get_tos_index(env: &mut Environment) -> usize {
