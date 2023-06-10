@@ -8,12 +8,12 @@ const HEAP_BOT: usize = 0;
 const HEAP_MID: usize = HEAP_SIZE / 2;
 const HEAP_TOP: usize = HEAP_SIZE - 1; // Last valid index
 
-const NUM_0: Obj = tag_num(0);
-const PAIR_TAG: Obj = tag_num(0);
-const CLOSURE_TAG: Obj = tag_num(1);
-const SYMBOL_TAG: Obj = tag_num(2);
-const STRING_TAG: Obj = tag_num(3);
-const SINGLETON_TAG: Obj = tag_num(5);
+const NUM_0: Obj = tag_number(0);
+const PAIR_TAG: Obj = tag_number(0);
+const CLOSURE_TAG: Obj = tag_number(1);
+const SYMBOL_TAG: Obj = tag_number(2);
+const STRING_TAG: Obj = tag_number(3);
+const SINGLETON_TAG: Obj = tag_number(5);
 
 const INSTR_AP: i64 = 0;
 const INSTR_SET: i64 = 1;
@@ -29,7 +29,7 @@ fn exit_vm(code: i32) {
     process::exit(code);
 }
 
-const fn tag_num(num: i64) -> Obj {
+const fn tag_number(num: i64) -> Obj {
     Obj::Num(num as u64)
 }
 
@@ -286,7 +286,7 @@ fn build_sym_table(env: &mut Environment) {
             break;
         }
 
-        accum = alloc_rib(env, tag_num(c as i64), accum, PAIR_TAG);
+        accum = alloc_rib(env, tag_number(c as i64), accum, PAIR_TAG);
     }
 
     env.symbol_table = create_sym(env, accum);
@@ -307,7 +307,7 @@ fn decode(env: &mut Environment) {
 
     loop {
         let x = get_code(env);
-        n = tag_num(x);
+        n = tag_number(x);
         op = -1;
 
         while unwrap_obj(&n) > {
@@ -328,11 +328,11 @@ fn decode(env: &mut Environment) {
 
             if unwrap_obj(&n) >= d {
                 n = if unwrap_obj(&n) == d {
-                    tag_num(get_int(env, 0))
+                    tag_number(get_int(env, 0))
                 } else {
                     let num = (unwrap_obj(&n) - d - 1) as i64;
                     let int = get_int(env, num);
-                    Obj::Rib(symbol_ref(env, tag_num(int)) as u64)
+                    Obj::Rib(symbol_ref(env, tag_number(int)) as u64)
                 }
             } else {
                 n = if op < 3 {
@@ -376,7 +376,7 @@ fn setup_stack(env: &mut Environment) {
     env.heap[get_cdr_index(env.stack)] = NUM_0;
     env.heap[get_tag_index(env.stack)] = first;
 
-    env.heap[get_car_index(first)] = tag_num(INSTR_HALT);
+    env.heap[get_car_index(first)] = tag_number(INSTR_HALT);
     env.heap[get_cdr_index(first)] = NUM_0;
     env.heap[get_tag_index(first)] = PAIR_TAG;
 }
@@ -548,7 +548,7 @@ fn list_lenght(env: &mut Environment, list: Obj) -> Obj {
         list = get_cdr(env, list)
     }
 
-    tag_num(len)
+    tag_number(len)
 }
 
 // TODO: Finish GC
