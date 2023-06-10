@@ -115,8 +115,7 @@ fn get_operand(environment: &mut Environment, object: Object) -> Object {
         object
     };
 
-    let rib = get_rib(environment, rib_object);
-    rib.fields[0]
+    get_rib(environment, rib_object).fields[0]
 }
 
 fn proc(environment: &mut Environment) -> Object {
