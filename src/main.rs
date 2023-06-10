@@ -203,11 +203,11 @@ fn get_nil(environment: &mut Environment) -> Object {
     get_cdr(environment, environment.r#false)
 }
 
-fn get_boolean(env: &mut Environment, cond: bool) -> Object {
-    if cond {
-        get_true(env)
+fn get_boolean(environment: &mut Environment, value: bool) -> Object {
+    if value {
+        get_true(environment)
     } else {
-        env.r#false
+        environment.r#false
     }
 }
 
