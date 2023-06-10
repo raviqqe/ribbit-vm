@@ -108,7 +108,11 @@ fn symbol_ref(env: &mut Environment, n: Object) -> usize {
 
 fn get_operand(environment: &mut Environment, object: Object) -> Object {
     let rib_object = if !is_rib(&object) {
-        Object::Rib(list_tail(environment, unwrap_object(&environment.stack) as usize, object) as u64)
+        Object::Rib(list_tail(
+            environment,
+            unwrap_object(&environment.stack) as usize,
+            object,
+        ) as u64)
     } else {
         object
     };
