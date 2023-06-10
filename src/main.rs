@@ -534,19 +534,19 @@ fn pop(env: &mut Environment) -> Object {
     x
 }
 
-fn push2(env: &mut Environment, car: Object, tag: Object) {
-    env.heap[env.alloc] = car;
-    env.alloc += 1;
+fn push2(environment: &mut Environment, car: Object, tag: Object) {
+    environment.heap[environment.alloc] = car;
+    environment.alloc += 1;
 
-    env.heap[env.alloc] = env.stack;
-    env.alloc += 1;
+    environment.heap[environment.alloc] = environment.stack;
+    environment.alloc += 1;
 
-    env.heap[env.alloc] = tag;
-    env.alloc += 1;
+    environment.heap[environment.alloc] = tag;
+    environment.alloc += 1;
 
-    env.stack = tag_rib((env.alloc - RIB_FIELD_COUNT) as u64);
+    environment.stack = tag_rib((environment.alloc - RIB_FIELD_COUNT) as u64);
 
-    if env.alloc == env.alloc_limit {
+    if environment.alloc == environment.alloc_limit {
         // TODO: GC
     }
 }
