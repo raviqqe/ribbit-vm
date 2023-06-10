@@ -531,9 +531,9 @@ fn alloc_rib2(environment: &mut Environment, car: Object, cdr: Object, tag: Obje
     Object::Rib(unwrap_object(&allocated))
 }
 
-fn pop(env: &mut Environment) -> Object {
-    let value = get_car(env, env.stack);
-    env.stack = get_cdr(env, env.stack);
+fn pop(environment: &mut Environment) -> Object {
+    let value = get_car(environment, environment.stack);
+    environment.stack = get_cdr(environment, environment.stack);
     value
 }
 
