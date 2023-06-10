@@ -273,7 +273,7 @@ fn build_symbol_table(environment: &mut Environment) {
     while n > 0 {
         n -= 1;
         let nil = get_nil(environment);
-        environment.symbol_table = create_sym(environment, nil);
+        environment.symbol_table = create_symbol(environment, nil);
     }
 
     let mut accum = get_nil(environment);
@@ -282,7 +282,7 @@ fn build_symbol_table(environment: &mut Environment) {
         let c = get_byte(environment);
 
         if c == 44 {
-            environment.symbol_table = create_sym(environment, accum);
+            environment.symbol_table = create_symbol(environment, accum);
             accum = get_nil(environment);
             continue;
         }
@@ -294,7 +294,7 @@ fn build_symbol_table(environment: &mut Environment) {
         accum = alloc_rib(environment, tag_number(c as i64), accum, PAIR_TAG);
     }
 
-    environment.symbol_table = create_sym(environment, accum);
+    environment.symbol_table = create_symbol(environment, accum);
 }
 
 fn set_global(env: &mut Environment, c: Object) {
@@ -496,8 +496,8 @@ fn run(environment: &mut Environment) {
     }
 }
 
-fn create_sym(env: &mut Environment, name: Object) -> Object {
-    let list_length = list_lenght(env, name);
+fn create_symbol(env: &mut Environment, name: Object) -> Object {
+    let list_length = list_length(env, name);
     let list: Object = alloc_rib(env, name, list_length, STRING_TAG);
     let sym = alloc_rib(env, env.r#false, list, SYMBOL_TAG);
     alloc_rib(env, sym, env.symbol_table, PAIR_TAG)
@@ -551,7 +551,7 @@ fn push2(environment: &mut Environment, car: Object, tag: Object) {
     }
 }
 
-fn list_lenght(env: &mut Environment, list: Object) -> Object {
+fn list_length(env: &mut Environment, list: Object) -> Object {
     let mut len: i64 = 0;
     let mut list = list;
 
