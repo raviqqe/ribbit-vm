@@ -214,11 +214,13 @@ fn get_boolean(env: &mut Environment, cond: bool) -> Object {
     }
 }
 
-fn get_rib<'a>(env: &'a mut Environment, index: Object) -> Rib<'a> {
+fn get_rib<'a>(environment: &'a mut Environment, index: Object) -> Rib<'a> {
     let index = unwrap_object(&index) as usize;
 
     Rib {
-        fields: env.heap[index..index + RIB_FIELD_COUNT].try_into().unwrap(),
+        fields: environment.heap[index..index + RIB_FIELD_COUNT]
+            .try_into()
+            .unwrap(),
     }
 }
 
