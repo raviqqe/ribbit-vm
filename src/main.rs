@@ -1,3 +1,5 @@
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use std::{
     convert::TryInto,
     io::{stdin, Read},
@@ -402,7 +404,10 @@ fn run(environment: &mut Environment) {
                 if !is_rib(&code(environment)) {
                     let code_obj = code(environment);
 
-                    primitive(environment, unwrap_object(&code_obj) as i64);
+                    primitive(
+                        environment,
+                        Primitive::from_u64(unwrap_object(&code_obj)).expect("valid primitive"),
+                    );
 
                     if jump {
                         environment.program_counter = get_continuation(environment);
@@ -572,6 +577,7 @@ fn gc(environment: &mut Environment) {
     environment.allocation_index = to_space;
 }
 
+#[derive(Clone, Copy, FromPrimitive)]
 enum Primitive {
     Rib,
     Id,
@@ -585,11 +591,17 @@ enum Primitive {
     SetField0,
     SetField1,
     SetField2,
+    Eq,
+    Lt,
+    Add,
+    Sub,
+    Mul,
+    Div,
     Getc,
     Putc,
 }
 
-fn primitive(environment: &mut Environment, primitive: i64) {
+fn primitive(environment: &mut Environment, primitive: Primitive) {
     match primitive {
         Primitive::Rib => {
             let rib = allocate_rib(environment, NUMBER_0, NUMBER_0, NUMBER_0);
