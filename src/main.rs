@@ -249,8 +249,8 @@ fn main() {
     build_symbol_table(&mut environment);
     decode(&mut environment);
 
-    let sym_table = environment.symbol_table;
-    let rib = allocate_rib(&mut environment, NUMBER_0, sym_table, CLOSURE_TAG);
+    let symbol_table = environment.symbol_table;
+    let rib = allocate_rib(&mut environment, NUMBER_0, symbol_table, CLOSURE_TAG);
     let fals = environment.r#false;
     let tru = get_true(&mut environment);
     let nil = get_nil(&mut environment);
