@@ -721,9 +721,9 @@ fn primitive(env: &mut Environment, no: i64) {
 
         // getc
         18 => {
-            //
             let mut buff: [u8; 1] = [0];
-            stdin().read_exact(&mut buff);
+            // TODO
+            stdin().read_exact(&mut buff).unwrap();
             let _read = buff[0];
         }
 
