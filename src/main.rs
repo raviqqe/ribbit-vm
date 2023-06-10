@@ -389,99 +389,104 @@ fn setup_stack(environment: &mut Environment) {
     environment.heap[get_tag_index(first)] = PAIR_TAG;
 }
 
-fn run(env: &mut Environment) {
+fn run(environment: &mut Environment) {
     loop {
-        let instr = get_car(env, env.program_counter);
+        let instr = get_car(environment, environment.program_counter);
         println!("{}", unwrap_object(&instr) as i64);
-        advance_program_counter(env);
-        let instr = get_car(env, env.program_counter);
+        advance_program_counter(environment);
+        let instr = get_car(environment, environment.program_counter);
         println!("{}", unwrap_object(&instr) as i64);
 
         match unwrap_object(&instr) as i64 {
             INSTRUCTION_HALT => exit(None),
             INSTR_APPLY => {
-                let pc_tag = unwrap_object(&get_tag(env, env.program_counter));
+                let pc_tag = unwrap_object(&get_tag(environment, environment.program_counter));
                 let jump = pc_tag == unwrap_object(&NUMBER_0);
 
-                if !is_rib(&code(env)) {
-                    let code_obj = code(env);
+                if !is_rib(&code(environment)) {
+                    let code_obj = code(environment);
 
-                    primitive(env, unwrap_object(&code_obj) as i64);
+                    primitive(environment, unwrap_object(&code_obj) as i64);
 
                     if jump {
-                        env.program_counter = get_continuation(env);
-                        env.heap[get_cdr_index(env.stack)] = get_car(env, env.program_counter);
+                        environment.program_counter = get_continuation(environment);
+                        environment.heap[get_cdr_index(environment.stack)] =
+                            get_car(environment, environment.program_counter);
                     }
 
-                    advance_program_counter(env);
+                    advance_program_counter(environment);
                 } else {
-                    let code_obj = code(env);
-                    let argc = get_car(env, code_obj);
-                    env.heap[get_car_index(env.program_counter)] = code(env);
+                    let code_object = code(environment);
+                    let argc = get_car(environment, code_object);
+                    environment.heap[get_car_index(environment.program_counter)] =
+                        code(environment);
 
-                    let proc_obj = proc(env);
-                    let mut s2 = alloc_rib(env, NUMBER_0, proc_obj, PAIR_TAG);
+                    let proc_obj = proc(environment);
+                    let mut s2 = alloc_rib(environment, NUMBER_0, proc_obj, PAIR_TAG);
 
                     for _ in 0..unwrap_object(&argc) {
-                        let pop_obj = pop(env);
-                        s2 = alloc_rib(env, pop_obj, s2, PAIR_TAG);
+                        let pop_obj = pop(environment);
+                        s2 = alloc_rib(environment, pop_obj, s2, PAIR_TAG);
                     }
 
                     let c2 =
-                        Object::Number(list_tail(env, unwrap_object(&s2) as usize, argc) as u64);
+                        Object::Number(
+                            list_tail(environment, unwrap_object(&s2) as usize, argc) as u64
+                        );
 
                     if jump {
-                        let k = get_continuation(env);
-                        env.heap[get_car_index(c2)] = get_car(env, k);
-                        env.heap[get_tag_index(c2)] = get_tag(env, k);
+                        let k = get_continuation(environment);
+                        environment.heap[get_car_index(c2)] = get_car(environment, k);
+                        environment.heap[get_tag_index(c2)] = get_tag(environment, k);
                     } else {
-                        env.heap[get_car_index(c2)] = env.stack;
-                        env.heap[get_tag_index(c2)] = get_tag(env, env.program_counter);
+                        environment.heap[get_car_index(c2)] = environment.stack;
+                        environment.heap[get_tag_index(c2)] =
+                            get_tag(environment, environment.program_counter);
                     }
 
-                    env.stack = s2;
+                    environment.stack = s2;
 
-                    let new_pc = get_car(env, env.program_counter);
-                    env.heap[get_car_index(env.program_counter)] = instr;
-                    env.program_counter = get_tag(env, new_pc);
+                    let new_pc = get_car(environment, environment.program_counter);
+                    environment.heap[get_car_index(environment.program_counter)] = instr;
+                    environment.program_counter = get_tag(environment, new_pc);
                 }
             }
 
             INSTR_SET => {
-                let x = pop(env);
+                let x = pop(environment);
 
-                let rib = if !is_rib(&get_cdr(env, env.program_counter)) {
-                    let cdr_obj = get_cdr(env, env.program_counter);
-                    let stack = unwrap_object(&env.stack) as usize;
-                    Object::Rib(list_tail(env, stack, cdr_obj) as u64)
+                let rib = if !is_rib(&get_cdr(environment, environment.program_counter)) {
+                    let cdr_obj = get_cdr(environment, environment.program_counter);
+                    let stack = unwrap_object(&environment.stack) as usize;
+                    Object::Rib(list_tail(environment, stack, cdr_obj) as u64)
                 } else {
-                    get_cdr(env, env.program_counter)
+                    get_cdr(environment, environment.program_counter)
                 };
 
-                env.heap[get_car_index(rib)] = x;
+                environment.heap[get_car_index(rib)] = x;
 
-                advance_program_counter(env);
+                advance_program_counter(environment);
             }
 
             INSTR_GET => {
-                let proc_obj = proc(env);
-                push2(env, proc_obj, PAIR_TAG);
-                advance_program_counter(env);
+                let proc_obj = proc(environment);
+                push2(environment, proc_obj, PAIR_TAG);
+                advance_program_counter(environment);
             }
 
             INSTR_CONSTANT => {
-                let cdr_obj = get_cdr(env, env.program_counter);
-                push2(env, cdr_obj, PAIR_TAG);
-                advance_program_counter(env);
+                let cdr_obj = get_cdr(environment, environment.program_counter);
+                push2(environment, cdr_obj, PAIR_TAG);
+                advance_program_counter(environment);
             }
 
             INSTR_IF => {
-                let p = unwrap_object(&pop(env));
-                let false_unwraped = unwrap_object(&env.r#false);
+                let p = unwrap_object(&pop(environment));
+                let false_unwraped = unwrap_object(&environment.r#false);
                 if p != false_unwraped {
-                    env.program_counter = get_cdr(env, env.program_counter);
+                    environment.program_counter = get_cdr(environment, environment.program_counter);
                 } else {
-                    env.program_counter = get_tag(env, env.program_counter);
+                    environment.program_counter = get_tag(environment, environment.program_counter);
                 }
             }
 
