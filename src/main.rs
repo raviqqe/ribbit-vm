@@ -13,14 +13,14 @@ const HEAP_MID: usize = HEAP_SIZE / 2;
 #[allow(dead_code)]
 const HEAP_TOP: usize = HEAP_SIZE - 1; // Last valid index
 
-const NUM_0: Object = tag_number(0);
+const NUMBER_0: Object = tag_number(0);
 const PAIR_TAG: Object = tag_number(0);
 const CLOSURE_TAG: Object = tag_number(1);
 const SYMBOL_TAG: Object = tag_number(2);
 const STRING_TAG: Object = tag_number(3);
 const SINGLETON_TAG: Object = tag_number(5);
 
-const INSTR_AP: i64 = 0;
+const INSTR_APPLY: i64 = 0;
 const INSTR_SET: i64 = 1;
 const INSTR_GET: i64 = 2;
 const INSTR_CONST: i64 = 3;
@@ -236,28 +236,28 @@ fn init() {
     let scan = &heap[0] as *const Object;
 
     let mut env = Environment {
-        stack: NUM_0,
-        pc: NUM_0,
-        r#false: NUM_0,
+        stack: NUMBER_0,
+        pc: NUMBER_0,
+        r#false: NUMBER_0,
 
         position: 0,
         input: input.as_bytes(),
         heap: &mut heap,
-        symbol_table: NUM_0,
+        symbol_table: NUMBER_0,
 
         alloc: HEAP_BOT,
         alloc_limit: HEAP_MID,
         scan,
     };
 
-    let init_0 = alloc_rib(&mut env, NUM_0, NUM_0, SINGLETON_TAG);
+    let init_0 = alloc_rib(&mut env, NUMBER_0, NUMBER_0, SINGLETON_TAG);
     env.r#false = alloc_rib(&mut env, init_0, init_0, SINGLETON_TAG);
 
     build_sym_table(&mut env);
     decode(&mut env);
 
     let sym_table = env.symbol_table;
-    let rib = alloc_rib(&mut env, NUM_0, sym_table, CLOSURE_TAG);
+    let rib = alloc_rib(&mut env, NUMBER_0, sym_table, CLOSURE_TAG);
     let fals = env.r#false;
     let tru = get_true(&mut env);
     let nil = get_nil(&mut env);
@@ -335,7 +335,7 @@ fn decode(env: &mut Environment) {
             n = pop(env);
         } else {
             if op == 0 {
-                push2(env, NUM_0, NUM_0);
+                push2(env, NUMBER_0, NUMBER_0);
             }
 
             if unwrap_object(&n) >= d {
@@ -356,11 +356,11 @@ fn decode(env: &mut Environment) {
 
             if op > 4 {
                 let obj = pop(env);
-                let rib2 = alloc_rib2(env, n, NUM_0, obj);
+                let rib2 = alloc_rib2(env, n, NUMBER_0, obj);
                 let nil = get_nil(env);
                 n = alloc_rib(env, rib2, nil, CLOSURE_TAG);
 
-                if unwrap_object(&env.stack) == unwrap_object(&NUM_0) {
+                if unwrap_object(&env.stack) == unwrap_object(&NUMBER_0) {
                     break;
                 }
             } else if op > 0 {
@@ -381,15 +381,15 @@ fn decode(env: &mut Environment) {
 }
 
 fn setup_stack(env: &mut Environment) {
-    push2(env, NUM_0, PAIR_TAG);
-    push2(env, NUM_0, PAIR_TAG);
+    push2(env, NUMBER_0, PAIR_TAG);
+    push2(env, NUMBER_0, PAIR_TAG);
 
     let first = get_cdr(env, env.stack);
-    env.heap[get_cdr_index(env.stack)] = NUM_0;
+    env.heap[get_cdr_index(env.stack)] = NUMBER_0;
     env.heap[get_tag_index(env.stack)] = first;
 
     env.heap[get_car_index(first)] = tag_number(INSTR_HALT);
-    env.heap[get_cdr_index(first)] = NUM_0;
+    env.heap[get_cdr_index(first)] = NUMBER_0;
     env.heap[get_tag_index(first)] = PAIR_TAG;
 }
 
@@ -406,9 +406,9 @@ fn run(env: &mut Environment) {
                 exit_vm(0);
             }
 
-            INSTR_AP => {
+            INSTR_APPLY => {
                 let pc_tag = unwrap_object(&get_tag(env, env.pc));
-                let jump = pc_tag == unwrap_object(&NUM_0);
+                let jump = pc_tag == unwrap_object(&NUMBER_0);
 
                 if !is_rib(&code(env)) {
                     let code_obj = code(env);
@@ -427,7 +427,7 @@ fn run(env: &mut Environment) {
                     env.heap[get_car_index(env.pc)] = code(env);
 
                     let proc_obj = proc(env);
-                    let mut s2 = alloc_rib(env, NUM_0, proc_obj, PAIR_TAG);
+                    let mut s2 = alloc_rib(env, NUMBER_0, proc_obj, PAIR_TAG);
 
                     for _ in 0..unwrap_object(&argc) {
                         let pop_obj = pop(env);
@@ -583,7 +583,7 @@ fn primitive(env: &mut Environment, no: i64) {
     match no {
         // rib
         0 => {
-            let new_rib = alloc_rib(env, NUM_0, NUM_0, NUM_0);
+            let new_rib = alloc_rib(env, NUMBER_0, NUMBER_0, NUMBER_0);
             env.heap[get_car_index(new_rib)] = pop(env);
             env.heap[get_cdr_index(new_rib)] = pop(env);
             env.heap[get_tag_index(new_rib)] = pop(env);
