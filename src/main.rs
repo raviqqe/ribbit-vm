@@ -499,8 +499,8 @@ fn run(environment: &mut Environment) {
 fn create_symbol(environment: &mut Environment, name: Object) -> Object {
     let len = list_length(environment, name);
     let list = alloc_rib(environment, name, len, STRING_TAG);
-    let sym = alloc_rib(environment, environment.r#false, list, SYMBOL_TAG);
-    alloc_rib(environment, sym, environment.symbol_table, PAIR_TAG)
+    let symbol = alloc_rib(environment, environment.r#false, list, SYMBOL_TAG);
+    alloc_rib(environment, symbol, environment.symbol_table, PAIR_TAG)
 }
 
 fn alloc_rib(env: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
