@@ -548,13 +548,12 @@ fn push2(environment: &mut Environment, car: Object, tag: Object) {
     }
 }
 
-fn list_length(env: &mut Environment, list: Object) -> Object {
-    let mut len: i64 = 0;
-    let mut list = list;
+fn list_length(environment: &mut Environment, mut list: Object) -> Object {
+    let mut len = 0;
 
-    while is_rib(&list) && unwrap_object(&get_tag(env, list)) == 0 {
+    while is_rib(&list) && unwrap_object(&get_tag(environment, list)) == 0 {
         len += 1;
-        list = get_cdr(env, list)
+        list = get_cdr(environment, list)
     }
 
     tag_number(len)
