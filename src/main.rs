@@ -127,14 +127,14 @@ fn code(environment: &mut Environment) -> Object {
     get_car(environment, proc_obj)
 }
 
-fn get_cont(env: &mut Environment) -> Object {
-    let mut s = env.stack;
+fn get_continuation(environment: &mut Environment) -> Object {
+    let mut stack = environment.stack;
 
-    while unwrap_object(&get_tag(env, s)) != 0 {
-        s = get_cdr(env, s);
+    while unwrap_object(&get_tag(environment, stack)) != 0 {
+        stack = get_cdr(environment, stack);
     }
 
-    s
+    stack
 }
 
 fn get_int(env: &mut Environment, n: i64) -> i64 {
@@ -412,7 +412,7 @@ fn run(env: &mut Environment) {
                     primitive(env, unwrap_object(&code_obj) as i64);
 
                     if jump {
-                        env.pc = get_cont(env);
+                        env.pc = get_continuation(env);
                         env.heap[get_cdr_index(env.stack)] = get_car(env, env.pc);
                     }
 
@@ -433,7 +433,7 @@ fn run(env: &mut Environment) {
                     let c2 = Object::Num(list_tail(env, unwrap_object(&s2) as usize, argc) as u64);
 
                     if jump {
-                        let k = get_cont(env);
+                        let k = get_continuation(env);
                         env.heap[get_car_index(c2)] = get_car(env, k);
                         env.heap[get_tag_index(c2)] = get_tag(env, k);
                     } else {
