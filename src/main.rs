@@ -34,8 +34,8 @@ enum ExitCode {
     IllegalInstructtion = 6,
 }
 
-fn exit(code: Option<ExitCode>) {
-    process::exit(code.map(|code| code as i32).unwrap_or(0));
+fn exit(code: Option<ExitCode>) -> ! {
+    process::exit(code.map(|code| code as i32).unwrap_or(0))
 }
 
 const fn tag_number(number: i64) -> Object {
@@ -726,6 +726,5 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
             let chr = unwrap_object(&x) as u8 as char;
             print!("{}", chr);
         }
-        _ => exit(Some(ExitCode::IllegalInstructtion)),
     }
 }
