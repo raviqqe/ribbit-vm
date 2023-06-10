@@ -62,7 +62,7 @@ const fn is_rib(object: &Object) -> bool {
 }
 
 struct Rib<'a> {
-    fields: &'a [Object],
+    fields: &'a [Object; RIB_FIELD_COUNT],
 }
 
 struct Environment<'a> {
@@ -91,7 +91,7 @@ fn list_tail(env: &mut Environment, lst: usize, i: Object) -> usize {
     if unwrap_object(&i) == 0 {
         lst
     } else {
-        let rib = get_rib_at(env, Object::Number(lst as u64));
+        let rib = get_rib(env, Object::Number(lst as u64));
         let cdr = unwrap_object(&rib.fields[1]);
         list_tail(env, cdr as usize, Object::Number(unwrap_object(&i) - 1))
     }
@@ -113,7 +113,7 @@ fn get_operand(environment: &mut Environment, object: Object) -> Object {
         object
     };
 
-    let rib = get_rib_at(environment, rib_object);
+    let rib = get_rib(environment, rib_object);
     rib.fields[0]
 }
 
@@ -166,12 +166,12 @@ fn get_byte(environment: &mut Environment) -> u8 {
 
 fn get_car_index(index: Object) -> usize {
     // TODO: Check this conversion
-    unwrap_object(&index).try_into().unwrap() 
+    unwrap_object(&index).try_into().unwrap()
 }
 
 fn get_cdr_index(index: Object) -> usize {
     // TODO: Check this conversion
-    (unwrap_object(&index) + 1).try_into().unwrap() 
+    (unwrap_object(&index) + 1).try_into().unwrap()
 }
 
 fn get_tag_index(index: Object) -> usize {
@@ -184,17 +184,17 @@ fn get_tos_index(env: &mut Environment) -> usize {
 }
 
 fn get_car(env: &mut Environment, index: Object) -> Object {
-    let rib = get_rib_at(env, index);
+    let rib = get_rib(env, index);
     rib.fields[0]
 }
 
 fn get_cdr(env: &mut Environment, index: Object) -> Object {
-    let rib = get_rib_at(env, index);
+    let rib = get_rib(env, index);
     rib.fields[1]
 }
 
 fn get_tag(env: &mut Environment, index: Object) -> Object {
-    let rib = get_rib_at(env, index);
+    let rib = get_rib(env, index);
     rib.fields[2]
 }
 
@@ -214,12 +214,11 @@ fn get_boolean(env: &mut Environment, cond: bool) -> Object {
     }
 }
 
-fn get_rib_at<'a>(env: &'a mut Environment, index: Object) -> Rib<'a> {
-    let start_index = unwrap_object(&index) as usize;
-    let end_index = start_index + RIB_FIELD_COUNT;
+fn get_rib<'a>(env: &'a mut Environment, index: Object) -> Rib<'a> {
+    let index = unwrap_object(&index) as usize;
 
     Rib {
-        fields: &env.heap[start_index..end_index],
+        fields: env.heap[index..index + RIB_FIELD_COUNT].try_into().unwrap(),
     }
 }
 
