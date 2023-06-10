@@ -36,7 +36,7 @@ fn exit_vm(code: i32) {
 }
 
 const fn tag_number(num: i64) -> Object {
-    Object::Num(num as u64)
+    Object::Number(num as u64)
 }
 
 const fn tag_rib(num: u64) -> Object {
@@ -45,13 +45,13 @@ const fn tag_rib(num: u64) -> Object {
 
 #[derive(Copy, Clone)]
 enum Object {
-    Num(u64),
+    Number(u64),
     Rib(u64),
 }
 
 const fn unwrap_object(obj: &Object) -> u64 {
     match obj {
-        Object::Num(num) => *num,
+        Object::Number(num) => *num,
 
         Object::Rib(num) => *num,
     }
@@ -59,7 +59,7 @@ const fn unwrap_object(obj: &Object) -> u64 {
 
 const fn is_rib(obj: &Object) -> bool {
     match obj {
-        Object::Num(_) => false,
+        Object::Number(_) => false,
 
         Object::Rib(_) => true,
     }
@@ -95,9 +95,9 @@ fn list_tail(env: &mut Environment, lst: usize, i: Object) -> usize {
     if unwrap_object(&i) == 0 {
         lst
     } else {
-        let rib = get_rib_at(env, Object::Num(lst as u64));
+        let rib = get_rib_at(env, Object::Number(lst as u64));
         let cdr = unwrap_object(&rib.fields[1]);
-        list_tail(env, cdr as usize, Object::Num(unwrap_object(&i) - 1))
+        list_tail(env, cdr as usize, Object::Number(unwrap_object(&i) - 1))
     }
 }
 
@@ -232,7 +232,7 @@ fn init() {
     // @@(replace ");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y" (encode 92)
     let input = String::from(");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y");
     // )@@
-    let mut heap: [Object; HEAP_SIZE] = [Object::Num(0); HEAP_SIZE];
+    let mut heap: [Object; HEAP_SIZE] = [Object::Number(0); HEAP_SIZE];
     let scan = &heap[0] as *const Object;
 
     let mut env = Environment {
@@ -302,7 +302,7 @@ fn build_sym_table(env: &mut Environment) {
 }
 
 fn set_global(env: &mut Environment, c: Object) {
-    let car_index = Object::Num(get_car_index(env.symbol_table) as u64);
+    let car_index = Object::Number(get_car_index(env.symbol_table) as u64);
     env.heap[get_car_index(car_index)] = c;
     env.symbol_table = get_cdr(env, env.symbol_table);
 }
@@ -311,7 +311,7 @@ fn decode(env: &mut Environment) {
     let weights = [20, 30, 0, 10, 11, 4];
 
     #[allow(unused_assignments)]
-    let mut n = Object::Num(0);
+    let mut n = Object::Number(0);
     #[allow(unused_assignments)]
     let mut d = 0;
     #[allow(unused_assignments)]
@@ -327,7 +327,7 @@ fn decode(env: &mut Environment) {
             d = weights[op as usize];
             d + 2
         } {
-            n = Object::Num(unwrap_object(&n) - (d + 3));
+            n = Object::Number(unwrap_object(&n) - (d + 3));
         }
 
         if x > 90 {
@@ -370,7 +370,7 @@ fn decode(env: &mut Environment) {
             }
         }
 
-        let c = alloc_rib(env, Object::Num(op as u64), n, Object::Num(0));
+        let c = alloc_rib(env, Object::Number(op as u64), n, Object::Number(0));
         env.heap[get_cdr_index(c)] = env.heap[get_tos_index(env)];
         env.heap[get_tos_index(env)] = c;
     }
@@ -434,7 +434,8 @@ fn run(env: &mut Environment) {
                         s2 = alloc_rib(env, pop_obj, s2, PAIR_TAG);
                     }
 
-                    let c2 = Object::Num(list_tail(env, unwrap_object(&s2) as usize, argc) as u64);
+                    let c2 =
+                        Object::Number(list_tail(env, unwrap_object(&s2) as usize, argc) as u64);
 
                     if jump {
                         let k = get_continuation(env);
@@ -611,7 +612,7 @@ fn primitive(env: &mut Environment, no: i64) {
         // close
         4 => {
             let mut tos_index = get_tos_index(env);
-            let x = get_car(env, Object::Num(tos_index as u64));
+            let x = get_car(env, Object::Number(tos_index as u64));
             let y = get_cdr(env, env.stack);
             tos_index = get_tos_index(env);
             env.heap[tos_index] = alloc_rib(env, x, y, CLOSURE_TAG);
@@ -694,7 +695,7 @@ fn primitive(env: &mut Environment, no: i64) {
             let y = pop(env);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
-            let add = Object::Num(num_x + num_y);
+            let add = Object::Number(num_x + num_y);
             push2(env, add, PAIR_TAG);
         }
 
@@ -704,7 +705,7 @@ fn primitive(env: &mut Environment, no: i64) {
             let y = pop(env);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
-            let sub = Object::Num(num_x - num_y);
+            let sub = Object::Number(num_x - num_y);
             push2(env, sub, PAIR_TAG);
         }
 
@@ -714,7 +715,7 @@ fn primitive(env: &mut Environment, no: i64) {
             let y = pop(env);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
-            let mul = Object::Num(num_x * num_y);
+            let mul = Object::Number(num_x * num_y);
             push2(env, mul, PAIR_TAG);
         }
 
@@ -724,7 +725,7 @@ fn primitive(env: &mut Environment, no: i64) {
             let y = pop(env);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
-            let div = Object::Num(num_x / num_y);
+            let div = Object::Number(num_x / num_y);
             push2(env, div, PAIR_TAG);
         }
 
