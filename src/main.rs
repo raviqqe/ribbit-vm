@@ -253,13 +253,13 @@ fn main() {
 
     let symbol_table = environment.symbol_table;
     let rib = allocate_rib(&mut environment, NUMBER_0, symbol_table, CLOSURE_TAG);
-    let fals = environment.r#false;
-    let tru = get_true(&mut environment);
+    let r#false = environment.r#false;
+    let r#true = get_true(&mut environment);
     let nil = get_nil(&mut environment);
 
     set_global(&mut environment, rib);
-    set_global(&mut environment, fals);
-    set_global(&mut environment, tru);
+    set_global(&mut environment, r#false);
+    set_global(&mut environment, r#true);
     set_global(&mut environment, nil);
 
     setup_stack(&mut environment);
