@@ -43,7 +43,7 @@ enum Object {
     Rib(u64),
 }
 
-const fn unwrap_obj(obj: &Object) -> u64 {
+const fn unwrap_object(obj: &Object) -> u64 {
     match obj {
         Object::Num(num) => *num,
 
@@ -85,23 +85,23 @@ fn advance_pc(env: &mut Environment) {
 }
 
 fn list_tail(env: &mut Environment, lst: usize, i: Object) -> usize {
-    if unwrap_obj(&i) == 0 {
+    if unwrap_object(&i) == 0 {
         lst
     } else {
         let rib = get_rib_at(env, Object::Num(lst as u64));
-        let cdr = unwrap_obj(&rib.fields[1]);
-        list_tail(env, cdr as usize, Object::Num(unwrap_obj(&i) - 1))
+        let cdr = unwrap_object(&rib.fields[1]);
+        list_tail(env, cdr as usize, Object::Num(unwrap_object(&i) - 1))
     }
 }
 
 fn symbol_ref(env: &mut Environment, n: Object) -> usize {
-    let sym_table_idx = unwrap_obj(&env.symbol_table) as usize;
+    let sym_table_idx = unwrap_object(&env.symbol_table) as usize;
     list_tail(env, sym_table_idx, n)
 }
 
 fn get_opnd(env: &mut Environment, obj: Object) -> Object {
     let rib_obj = if !is_rib(&obj) {
-        Object::Rib(list_tail(env, unwrap_obj(&env.stack) as usize, obj) as u64)
+        Object::Rib(list_tail(env, unwrap_object(&env.stack) as usize, obj) as u64)
     } else {
         obj
     };
@@ -123,7 +123,7 @@ fn code(env: &mut Environment) -> Object {
 fn get_cont(env: &mut Environment) -> Object {
     let mut s = env.stack;
 
-    while unwrap_obj(&get_tag(env, s)) != 0 {
+    while unwrap_object(&get_tag(env, s)) != 0 {
         s = get_cdr(env, s);
     }
 
@@ -156,15 +156,15 @@ fn get_byte(env: &mut Environment) -> u8 {
 }
 
 fn get_car_index(index: Object) -> usize {
-    unwrap_obj(&index).try_into().unwrap() // TODO: Check this conversion
+    unwrap_object(&index).try_into().unwrap() // TODO: Check this conversion
 }
 
 fn get_cdr_index(index: Object) -> usize {
-    (unwrap_obj(&index) + 1).try_into().unwrap() // TODO: Check this conversion
+    (unwrap_object(&index) + 1).try_into().unwrap() // TODO: Check this conversion
 }
 
 fn get_tag_index(index: Object) -> usize {
-    (unwrap_obj(&index) + 2).try_into().unwrap() // TODO: Check this conversion
+    (unwrap_object(&index) + 2).try_into().unwrap() // TODO: Check this conversion
 }
 
 fn get_tos_index(env: &mut Environment) -> usize {
@@ -207,7 +207,7 @@ fn get_tos(env: &mut Environment) -> Object {
 }
 
 fn get_rib_at<'a>(env: &'a mut Environment, index: Object) -> Rib<'a> {
-    let start_index = unwrap_obj(&index) as usize;
+    let start_index = unwrap_object(&index) as usize;
     let end_index = start_index + RIB_FIELD_COUNT;
 
     Rib {
@@ -310,12 +310,12 @@ fn decode(env: &mut Environment) {
         n = tag_number(x);
         op = -1;
 
-        while unwrap_obj(&n) > {
+        while unwrap_object(&n) > {
             op += 1;
             d = weights[op as usize];
             d + 2
         } {
-            n = Object::Num(unwrap_obj(&n) - (d + 3));
+            n = Object::Num(unwrap_object(&n) - (d + 3));
         }
 
         if x > 90 {
@@ -326,11 +326,11 @@ fn decode(env: &mut Environment) {
                 push2(env, NUM_0, NUM_0);
             }
 
-            if unwrap_obj(&n) >= d {
-                n = if unwrap_obj(&n) == d {
+            if unwrap_object(&n) >= d {
+                n = if unwrap_object(&n) == d {
                     tag_number(get_int(env, 0))
                 } else {
-                    let num = (unwrap_obj(&n) - d - 1) as i64;
+                    let num = (unwrap_object(&n) - d - 1) as i64;
                     let int = get_int(env, num);
                     Object::Rib(symbol_ref(env, tag_number(int)) as u64)
                 }
@@ -348,7 +348,7 @@ fn decode(env: &mut Environment) {
                 let nil = get_nil(env);
                 n = alloc_rib(env, rib2, nil, CLOSURE_TAG);
 
-                if unwrap_obj(&env.stack) == unwrap_obj(&NUM_0) {
+                if unwrap_object(&env.stack) == unwrap_object(&NUM_0) {
                     break;
                 }
             } else if op > 0 {
@@ -384,23 +384,25 @@ fn setup_stack(env: &mut Environment) {
 fn run(env: &mut Environment) {
     loop {
         let instr = get_car(env, env.pc);
-        println!("{}", unwrap_obj(&instr) as i64);
+        println!("{}", unwrap_object(&instr) as i64);
         advance_pc(env);
         let instr = get_car(env, env.pc);
-        println!("{}", unwrap_obj(&instr) as i64);
+        println!("{}", unwrap_object(&instr) as i64);
 
-        match unwrap_obj(&instr) as i64 {
+        match unwrap_object(&instr) as i64 {
             INSTR_HALT => {
                 exit_vm(0);
             }
 
             INSTR_AP => {
-                let pc_tag = unwrap_obj(&get_tag(env, env.pc));
-                let jump = pc_tag == unwrap_obj(&NUM_0);
+                let pc_tag = unwrap_object(&get_tag(env, env.pc));
+                let jump = pc_tag == unwrap_object(&NUM_0);
 
                 if !is_rib(&code(env)) {
                     let code_obj = code(env);
-                    primitive(env, unwrap_obj(&code_obj) as i64);
+
+                    primitive(env, unwrap_object(&code_obj) as i64);
+
                     if jump {
                         env.pc = get_cont(env);
                         env.heap[get_cdr_index(env.stack)] = get_car(env, env.pc);
@@ -415,12 +417,12 @@ fn run(env: &mut Environment) {
                     let proc_obj = proc(env);
                     let mut s2 = alloc_rib(env, NUM_0, proc_obj, PAIR_TAG);
 
-                    for _ in 0..unwrap_obj(&argc) {
+                    for _ in 0..unwrap_object(&argc) {
                         let pop_obj = pop(env);
                         s2 = alloc_rib(env, pop_obj, s2, PAIR_TAG);
                     }
 
-                    let c2 = Object::Num(list_tail(env, unwrap_obj(&s2) as usize, argc) as u64);
+                    let c2 = Object::Num(list_tail(env, unwrap_object(&s2) as usize, argc) as u64);
 
                     if jump {
                         let k = get_cont(env);
@@ -444,7 +446,7 @@ fn run(env: &mut Environment) {
 
                 let rib = if !is_rib(&get_cdr(env, env.pc)) {
                     let cdr_obj = get_cdr(env, env.pc);
-                    let stack = unwrap_obj(&env.stack) as usize;
+                    let stack = unwrap_object(&env.stack) as usize;
                     Object::Rib(list_tail(env, stack, cdr_obj) as u64)
                 } else {
                     get_cdr(env, env.pc)
@@ -468,8 +470,8 @@ fn run(env: &mut Environment) {
             }
 
             INSTR_IF => {
-                let p = unwrap_obj(&pop(env));
-                let false_unwraped = unwrap_obj(&env.FALSE);
+                let p = unwrap_object(&pop(env));
+                let false_unwraped = unwrap_object(&env.FALSE);
                 if p != false_unwraped {
                     env.pc = get_cdr(env, env.pc);
                 } else {
@@ -501,7 +503,7 @@ fn alloc_rib(env: &mut Environment, car: Object, cdr: Object, tag: Object) -> Ob
 
     env.stack = old_stack;
 
-    Object::Rib(unwrap_obj(&allocated))
+    Object::Rib(unwrap_object(&allocated))
 }
 
 fn alloc_rib2(env: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
@@ -513,7 +515,7 @@ fn alloc_rib2(env: &mut Environment, car: Object, cdr: Object, tag: Object) -> O
 
     env.stack = old_stack;
 
-    Object::Rib(unwrap_obj(&allocated))
+    Object::Rib(unwrap_object(&allocated))
 }
 
 fn pop(env: &mut Environment) -> Object {
@@ -543,7 +545,7 @@ fn list_lenght(env: &mut Environment, list: Object) -> Object {
     let mut len: i64 = 0;
     let mut list = list;
 
-    while is_rib(&list) && unwrap_obj(&get_tag(env, list)) == 0 {
+    while is_rib(&list) && unwrap_object(&get_tag(env, list)) == 0 {
         len += 1;
         list = get_cdr(env, list)
     }
@@ -659,7 +661,7 @@ fn primitive(env: &mut Environment, no: i64) {
         12 => {
             let x = pop(env);
             let y = pop(env);
-            let cond = unwrap_obj(&x) == unwrap_obj(&y);
+            let cond = unwrap_object(&x) == unwrap_object(&y);
             let boolean = get_boolean(env, cond);
             push2(env, boolean, PAIR_TAG);
         }
@@ -668,7 +670,7 @@ fn primitive(env: &mut Environment, no: i64) {
         13 => {
             let x = pop(env);
             let y = pop(env);
-            let cond = unwrap_obj(&x) < unwrap_obj(&y);
+            let cond = unwrap_object(&x) < unwrap_object(&y);
             let boolean = get_boolean(env, cond);
             push2(env, boolean, PAIR_TAG);
         }
@@ -677,8 +679,8 @@ fn primitive(env: &mut Environment, no: i64) {
         14 => {
             let x = pop(env);
             let y = pop(env);
-            let num_x = unwrap_obj(&x);
-            let num_y = unwrap_obj(&y);
+            let num_x = unwrap_object(&x);
+            let num_y = unwrap_object(&y);
             let add = Object::Num(num_x + num_y);
             push2(env, add, PAIR_TAG);
         }
@@ -687,8 +689,8 @@ fn primitive(env: &mut Environment, no: i64) {
         15 => {
             let x = pop(env);
             let y = pop(env);
-            let num_x = unwrap_obj(&x);
-            let num_y = unwrap_obj(&y);
+            let num_x = unwrap_object(&x);
+            let num_y = unwrap_object(&y);
             let sub = Object::Num(num_x - num_y);
             push2(env, sub, PAIR_TAG);
         }
@@ -697,8 +699,8 @@ fn primitive(env: &mut Environment, no: i64) {
         16 => {
             let x = pop(env);
             let y = pop(env);
-            let num_x = unwrap_obj(&x);
-            let num_y = unwrap_obj(&y);
+            let num_x = unwrap_object(&x);
+            let num_y = unwrap_object(&y);
             let mul = Object::Num(num_x * num_y);
             push2(env, mul, PAIR_TAG);
         }
@@ -707,8 +709,8 @@ fn primitive(env: &mut Environment, no: i64) {
         17 => {
             let x = pop(env);
             let y = pop(env);
-            let num_x = unwrap_obj(&x);
-            let num_y = unwrap_obj(&y);
+            let num_x = unwrap_object(&x);
+            let num_y = unwrap_object(&y);
             let div = Object::Num(num_x / num_y);
             push2(env, div, PAIR_TAG);
         }
@@ -724,7 +726,7 @@ fn primitive(env: &mut Environment, no: i64) {
         // putc
         19 => {
             let x = pop(env);
-            let chr = unwrap_obj(&x) as u8 as char;
+            let chr = unwrap_object(&x) as u8 as char;
             print!("{}", chr);
         }
 
