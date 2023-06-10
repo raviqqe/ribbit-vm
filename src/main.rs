@@ -1,7 +1,4 @@
-use std::convert::TryInto;
-use std::io;
-use std::io::Read;
-use std::process;
+use std::{convert::TryInto, io, io::Read, process};
 
 const RIB_NB_FIELDS: usize = 3;
 const MAX_NB_OBJS: u32 = 30_000;
@@ -235,7 +232,7 @@ fn init() {
         FALSE: NUM_0,
 
         pos: 0,
-        input: &input.as_bytes(),
+        input: input.as_bytes(),
         heap: &mut heap,
         symbol_table: NUM_0,
 
@@ -387,10 +384,10 @@ fn setup_stack(env: &mut Environment) {
 fn run(env: &mut Environment) {
     loop {
         let instr = get_car(env, env.pc);
-        print!("{}\n", unwrap_obj(&instr) as i64);
+        println!("{}", unwrap_obj(&instr) as i64);
         advance_pc(env);
         let instr = get_car(env, env.pc);
-        print!("{}\n", unwrap_obj(&instr) as i64);
+        println!("{}", unwrap_obj(&instr) as i64);
 
         match unwrap_obj(&instr) as i64 {
             INSTR_HALT => {
@@ -721,7 +718,7 @@ fn prim(env: &mut Environment, no: i64) {
             //
             let mut buff: [u8; 1] = [0];
             io::stdin().read_exact(&mut buff);
-            let read = buff[0];
+            let _read = buff[0];
         }
 
         // putc
