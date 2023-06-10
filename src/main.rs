@@ -263,6 +263,7 @@ fn main() {
     set_global(&mut environment, nil);
 
     setup_stack(&mut environment);
+
     run(&mut environment);
 }
 
