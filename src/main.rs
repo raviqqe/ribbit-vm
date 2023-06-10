@@ -391,8 +391,8 @@ fn setup_stack(environment: &mut Environment) {
 
 fn run(environment: &mut Environment) {
     loop {
-        let instr = get_car(environment, environment.program_counter);
-        println!("{}", unwrap_object(&instr) as i64);
+        let instruction = get_car(environment, environment.program_counter);
+        println!("{}", unwrap_object(&instruction) as i64);
         advance_program_counter(environment);
         let instr = get_car(environment, environment.program_counter);
         println!("{}", unwrap_object(&instr) as i64);
