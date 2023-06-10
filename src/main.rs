@@ -106,25 +106,25 @@ fn symbol_ref(env: &mut Environment, n: Object) -> usize {
     list_tail(env, sym_table_idx, n)
 }
 
-fn get_opnd(env: &mut Environment, obj: Object) -> Object {
-    let rib_obj = if !is_rib(&obj) {
-        Object::Rib(list_tail(env, unwrap_object(&env.stack) as usize, obj) as u64)
+fn get_operand(environment: &mut Environment, object: Object) -> Object {
+    let rib_object = if !is_rib(&object) {
+        Object::Rib(list_tail(environment, unwrap_object(&environment.stack) as usize, object) as u64)
     } else {
-        obj
+        object
     };
 
-    let rib = get_rib_at(env, rib_obj);
+    let rib = get_rib_at(environment, rib_object);
     rib.fields[0]
 }
 
-fn proc(env: &mut Environment) -> Object {
-    let cdr = get_cdr(env, env.pc);
-    get_opnd(env, cdr)
+fn proc(environment: &mut Environment) -> Object {
+    let cdr = get_cdr(environment, environment.pc);
+    get_operand(environment, cdr)
 }
 
-fn code(env: &mut Environment) -> Object {
-    let proc_obj = proc(env);
-    get_car(env, proc_obj)
+fn code(environment: &mut Environment) -> Object {
+    let proc_obj = proc(environment);
+    get_car(environment, proc_obj)
 }
 
 fn get_cont(env: &mut Environment) -> Object {
