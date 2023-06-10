@@ -298,8 +298,8 @@ fn build_symbol_table(environment: &mut Environment) {
 }
 
 fn set_global(environment: &mut Environment, object: Object) {
-    let car_index = Object::Number(get_car_index(environment.symbol_table) as u64);
-    environment.heap[get_car_index(car_index)] = object;
+    let index = Object::Number(get_car_index(environment.symbol_table) as u64);
+    environment.heap[get_car_index(index)] = object;
     environment.symbol_table = get_cdr(environment, environment.symbol_table);
 }
 
