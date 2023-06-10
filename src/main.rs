@@ -73,7 +73,7 @@ struct Environment<'a> {
     // Roots
     stack: Object,
     pc: Object,
-    FALSE: Object,
+    r#false: Object,
 
     pos: usize,
     input: &'a [u8],
@@ -194,18 +194,18 @@ fn get_tag(env: &mut Environment, index: Object) -> Object {
 }
 
 fn get_true(env: &mut Environment) -> Object {
-    get_car(env, env.FALSE)
+    get_car(env, env.r#false)
 }
 
 fn get_nil(env: &mut Environment) -> Object {
-    get_cdr(env, env.FALSE)
+    get_cdr(env, env.r#false)
 }
 
 fn get_boolean(env: &mut Environment, cond: bool) -> Object {
     if cond {
         get_true(env)
     } else {
-        env.FALSE
+        env.r#false
     }
 }
 
@@ -236,7 +236,7 @@ fn init() {
     let mut env = Environment {
         stack: NUM_0,
         pc: NUM_0,
-        FALSE: NUM_0,
+        r#false: NUM_0,
 
         pos: 0,
         input: input.as_bytes(),
@@ -249,14 +249,14 @@ fn init() {
     };
 
     let init_0 = alloc_rib(&mut env, NUM_0, NUM_0, SINGLETON_TAG);
-    env.FALSE = alloc_rib(&mut env, init_0, init_0, SINGLETON_TAG);
+    env.r#false = alloc_rib(&mut env, init_0, init_0, SINGLETON_TAG);
 
     build_sym_table(&mut env);
     decode(&mut env);
 
     let sym_table = env.symbol_table;
     let rib = alloc_rib(&mut env, NUM_0, sym_table, CLOSURE_TAG);
-    let fals = env.FALSE;
+    let fals = env.r#false;
     let tru = get_true(&mut env);
     let nil = get_nil(&mut env);
 
@@ -478,7 +478,7 @@ fn run(env: &mut Environment) {
 
             INSTR_IF => {
                 let p = unwrap_object(&pop(env));
-                let false_unwraped = unwrap_object(&env.FALSE);
+                let false_unwraped = unwrap_object(&env.r#false);
                 if p != false_unwraped {
                     env.pc = get_cdr(env, env.pc);
                 } else {
@@ -496,7 +496,7 @@ fn run(env: &mut Environment) {
 fn create_sym(env: &mut Environment, name: Object) -> Object {
     let list_length = list_lenght(env, name);
     let list: Object = alloc_rib(env, name, list_length, STRING_TAG);
-    let sym = alloc_rib(env, env.FALSE, list, SYMBOL_TAG);
+    let sym = alloc_rib(env, env.r#false, list, SYMBOL_TAG);
     alloc_rib(env, sym, env.symbol_table, PAIR_TAG)
 }
 
