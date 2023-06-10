@@ -561,129 +561,117 @@ fn list_length(environment: &mut Environment, mut list: Object) -> Object {
 
 // TODO: Finish GC
 #[allow(dead_code)]
-fn gc(env: &mut Environment) {
-    let to_space = if env.allocation_limit == HEAP_MIDDLE {
+fn gc(environment: &mut Environment) {
+    let to_space = if environment.allocation_limit == HEAP_MIDDLE {
         HEAP_MIDDLE
     } else {
         HEAP_BOTTOM
     };
-    env.allocation_limit = to_space + SPACE_SIZE as usize;
 
-    env.allocation_index = to_space;
+    environment.allocation_limit = to_space + SPACE_SIZE as usize;
+    environment.allocation_index = to_space;
+}
+
+enum Primitive {
+    Rib,
+    Id,
+    Pop,
+    Skip,
+    Close,
+    IsRib,
+    Field0,
+    Field1,
+    Field2,
+    SetField0,
+    SetField1,
+    SetField2,
+    Getc,
+    Putc,
 }
 
 fn primitive(environment: &mut Environment, primitive: i64) {
     match primitive {
-        // rib
-        0 => {
+        Primitive::Rib => {
             let rib = allocate_rib(environment, NUMBER_0, NUMBER_0, NUMBER_0);
             environment.heap[get_car_index(rib)] = pop(environment);
             environment.heap[get_cdr_index(rib)] = pop(environment);
             environment.heap[get_tag_index(rib)] = pop(environment);
             push2(environment, rib, PAIR_TAG);
         }
-
-        // id
-        1 => {
+        Primitive::Id => {
             let x = pop(environment);
             push2(environment, x, PAIR_TAG);
         }
-
-        // pop
-        2 => {
+        Primitive::Pop => {
             pop(environment);
             // TODO: Check what is the meaning of true?
         }
-
-        // skip
-        3 => {
+        Primitive::Skip => {
             let x = pop(environment);
             pop(environment);
             push2(environment, x, PAIR_TAG);
         }
-
-        // close
-        4 => {
+        Primitive::Close => {
             let mut tos_index = get_tos_index(environment);
             let x = get_car(environment, Object::Number(tos_index as u64));
             let y = get_cdr(environment, environment.stack);
             tos_index = get_tos_index(environment);
             environment.heap[tos_index] = allocate_rib(environment, x, y, CLOSURE_TAG);
         }
-
-        // is rib?
-        5 => {
+        Primitive::IsRib => {
             let x = pop(environment);
             let cond = is_rib(&x);
             let boolean = get_boolean(environment, cond);
             push2(environment, boolean, PAIR_TAG);
         }
-
-        // field0
-        6 => {
+        Primitive::Field0 => {
             let x = pop(environment);
             let car = get_car(environment, x);
             push2(environment, car, PAIR_TAG);
         }
-
-        // field1
-        7 => {
+        Primitive::Field1 => {
             let x = pop(environment);
             let cdr = get_cdr(environment, x);
             push2(environment, cdr, PAIR_TAG);
         }
-
-        // field2
-        8 => {
+        Primitive::Field2 => {
             let x = pop(environment);
             let tag = get_tag(environment, x);
             push2(environment, tag, PAIR_TAG)
         }
-
-        // set field0
-        9 => {
+        Primitive::SetField0 => {
             let x = pop(environment);
             let y = pop(environment);
             environment.heap[get_car_index(x)] = y;
             push2(environment, y, PAIR_TAG);
         }
-
-        // set field1
-        10 => {
+        Primitive::SetField1 => {
             let x = pop(environment);
             let y = pop(environment);
             environment.heap[get_cdr_index(x)] = y;
             push2(environment, y, PAIR_TAG);
         }
-
-        // set field2
-        11 => {
+        Primitive::SetField2 => {
             let x = pop(environment);
             let y = pop(environment);
             environment.heap[get_tag_index(x)] = y;
             push2(environment, y, PAIR_TAG);
         }
-
-        // eq
-        12 => {
+        Primitive::Eq => {
             let x = pop(environment);
             let y = pop(environment);
             let cond = unwrap_object(&x) == unwrap_object(&y);
             let boolean = get_boolean(environment, cond);
             push2(environment, boolean, PAIR_TAG);
         }
-
-        // lt
-        13 => {
+        Primitive::Lt => {
             let x = pop(environment);
             let y = pop(environment);
             let cond = unwrap_object(&x) < unwrap_object(&y);
             let boolean = get_boolean(environment, cond);
             push2(environment, boolean, PAIR_TAG);
         }
-
-        // add
-        14 => {
+        Primitive::Add => {
             let x = pop(environment);
             let y = pop(environment);
             let num_x = unwrap_object(&x);
@@ -691,9 +679,7 @@ fn primitive(environment: &mut Environment, primitive: i64) {
             let add = Object::Number(num_x + num_y);
             push2(environment, add, PAIR_TAG);
         }
-
-        // sub
-        15 => {
+        Primitive::Sub => {
             let x = pop(environment);
             let y = pop(environment);
             let num_x = unwrap_object(&x);
@@ -701,9 +687,7 @@ fn primitive(environment: &mut Environment, primitive: i64) {
             let sub = Object::Number(num_x - num_y);
             push2(environment, sub, PAIR_TAG);
         }
-
-        // mul
-        16 => {
+        Primitive::Mul => {
             let x = pop(environment);
             let y = pop(environment);
             let num_x = unwrap_object(&x);
@@ -711,9 +695,7 @@ fn primitive(environment: &mut Environment, primitive: i64) {
             let mul = Object::Number(num_x * num_y);
             push2(environment, mul, PAIR_TAG);
         }
-
-        // div
-        17 => {
+        Primitive::Div => {
             let x = pop(environment);
             let y = pop(environment);
             let num_x = unwrap_object(&x);
@@ -721,17 +703,13 @@ fn primitive(environment: &mut Environment, primitive: i64) {
             let div = Object::Number(num_x / num_y);
             push2(environment, div, PAIR_TAG);
         }
-
-        // getc
-        18 => {
+        Primitive::Getc => {
             let mut buff: [u8; 1] = [0];
             // TODO
             stdin().read_exact(&mut buff).unwrap();
             let _read = buff[0];
         }
-
-        // putc
-        19 => {
+        Primitive::Putc => {
             let x = pop(environment);
             let chr = unwrap_object(&x) as u8 as char;
             print!("{}", chr);
