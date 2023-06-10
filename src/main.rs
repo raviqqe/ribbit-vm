@@ -8,8 +8,8 @@ const RIB_FIELD_COUNT: usize = 3;
 const MAX_OBJECT_COUNT: u32 = 30_000;
 const SPACE_SIZE: u32 = MAX_OBJECT_COUNT * RIB_FIELD_COUNT as u32;
 const HEAP_SIZE: usize = SPACE_SIZE as usize * 2;
-const HEAP_BOT: usize = 0;
-const HEAP_MID: usize = HEAP_SIZE / 2;
+const HEAP_BOTTOM: usize = 0;
+const HEAP_MIDDLE: usize = HEAP_SIZE / 2;
 #[allow(dead_code)]
 const HEAP_TOP: usize = HEAP_SIZE - 1; // Last valid index
 
@@ -27,9 +27,7 @@ const INSTR_CONST: i64 = 3;
 const INSTR_IF: i64 = 4;
 const INSTR_HALT: i64 = 5;
 
-const EXIT_ILLEGAL_INSTR: i32 = 6;
-#[allow(dead_code)]
-const EXIT_NO_MEMORY: i32 = 7;
+const EXIT_ILLEGAL_INSTRUCTION: i32 = 6;
 
 fn exit_vm(code: i32) {
     process::exit(code);
@@ -245,8 +243,8 @@ fn init() {
         heap: &mut heap,
         symbol_table: NUMBER_0,
 
-        alloc: HEAP_BOT,
-        alloc_limit: HEAP_MID,
+        alloc: HEAP_BOTTOM,
+        alloc_limit: HEAP_MIDDLE,
         scan,
     };
 
@@ -493,7 +491,7 @@ fn run(env: &mut Environment) {
             }
 
             _ => {
-                exit_vm(EXIT_ILLEGAL_INSTR);
+                exit_vm(EXIT_ILLEGAL_INSTRUCTION);
             }
         }
     }
@@ -569,164 +567,164 @@ fn list_lenght(env: &mut Environment, list: Object) -> Object {
 // TODO: Finish GC
 #[allow(dead_code)]
 fn gc(env: &mut Environment) {
-    let to_space = if env.alloc_limit == HEAP_MID {
-        HEAP_MID
+    let to_space = if env.alloc_limit == HEAP_MIDDLE {
+        HEAP_MIDDLE
     } else {
-        HEAP_BOT
+        HEAP_BOTTOM
     };
     env.alloc_limit = to_space + SPACE_SIZE as usize;
 
     env.alloc = to_space;
 }
 
-fn primitive(env: &mut Environment, no: i64) {
+fn primitive(environment: &mut Environment, no: i64) {
     match no {
         // rib
         0 => {
-            let new_rib = alloc_rib(env, NUMBER_0, NUMBER_0, NUMBER_0);
-            env.heap[get_car_index(new_rib)] = pop(env);
-            env.heap[get_cdr_index(new_rib)] = pop(env);
-            env.heap[get_tag_index(new_rib)] = pop(env);
-            push2(env, new_rib, PAIR_TAG);
+            let rib = alloc_rib(environment, NUMBER_0, NUMBER_0, NUMBER_0);
+            environment.heap[get_car_index(rib)] = pop(environment);
+            environment.heap[get_cdr_index(rib)] = pop(environment);
+            environment.heap[get_tag_index(rib)] = pop(environment);
+            push2(environment, rib, PAIR_TAG);
         }
 
         // id
         1 => {
-            let x = pop(env);
-            push2(env, x, PAIR_TAG);
+            let x = pop(environment);
+            push2(environment, x, PAIR_TAG);
         }
 
         // pop
         2 => {
-            pop(env);
+            pop(environment);
             // TODO: Check what is the meaning of true?
         }
 
         // skip
         3 => {
-            let x = pop(env);
-            pop(env);
-            push2(env, x, PAIR_TAG);
+            let x = pop(environment);
+            pop(environment);
+            push2(environment, x, PAIR_TAG);
         }
 
         // close
         4 => {
-            let mut tos_index = get_tos_index(env);
-            let x = get_car(env, Object::Number(tos_index as u64));
-            let y = get_cdr(env, env.stack);
-            tos_index = get_tos_index(env);
-            env.heap[tos_index] = alloc_rib(env, x, y, CLOSURE_TAG);
+            let mut tos_index = get_tos_index(environment);
+            let x = get_car(environment, Object::Number(tos_index as u64));
+            let y = get_cdr(environment, environment.stack);
+            tos_index = get_tos_index(environment);
+            environment.heap[tos_index] = alloc_rib(environment, x, y, CLOSURE_TAG);
         }
 
         // is rib?
         5 => {
-            let x = pop(env);
+            let x = pop(environment);
             let cond = is_rib(&x);
-            let boolean = get_boolean(env, cond);
-            push2(env, boolean, PAIR_TAG);
+            let boolean = get_boolean(environment, cond);
+            push2(environment, boolean, PAIR_TAG);
         }
 
         // field0
         6 => {
-            let x = pop(env);
-            let car = get_car(env, x);
-            push2(env, car, PAIR_TAG);
+            let x = pop(environment);
+            let car = get_car(environment, x);
+            push2(environment, car, PAIR_TAG);
         }
 
         // field1
         7 => {
-            let x = pop(env);
-            let cdr = get_cdr(env, x);
-            push2(env, cdr, PAIR_TAG);
+            let x = pop(environment);
+            let cdr = get_cdr(environment, x);
+            push2(environment, cdr, PAIR_TAG);
         }
 
         // field2
         8 => {
-            let x = pop(env);
-            let tag = get_tag(env, x);
-            push2(env, tag, PAIR_TAG)
+            let x = pop(environment);
+            let tag = get_tag(environment, x);
+            push2(environment, tag, PAIR_TAG)
         }
 
         // set field0
         9 => {
-            let x = pop(env);
-            let y = pop(env);
-            env.heap[get_car_index(x)] = y;
-            push2(env, y, PAIR_TAG);
+            let x = pop(environment);
+            let y = pop(environment);
+            environment.heap[get_car_index(x)] = y;
+            push2(environment, y, PAIR_TAG);
         }
 
         // set field1
         10 => {
-            let x = pop(env);
-            let y = pop(env);
-            env.heap[get_cdr_index(x)] = y;
-            push2(env, y, PAIR_TAG);
+            let x = pop(environment);
+            let y = pop(environment);
+            environment.heap[get_cdr_index(x)] = y;
+            push2(environment, y, PAIR_TAG);
         }
 
         // set field2
         11 => {
-            let x = pop(env);
-            let y = pop(env);
-            env.heap[get_tag_index(x)] = y;
-            push2(env, y, PAIR_TAG);
+            let x = pop(environment);
+            let y = pop(environment);
+            environment.heap[get_tag_index(x)] = y;
+            push2(environment, y, PAIR_TAG);
         }
 
         // eq
         12 => {
-            let x = pop(env);
-            let y = pop(env);
+            let x = pop(environment);
+            let y = pop(environment);
             let cond = unwrap_object(&x) == unwrap_object(&y);
-            let boolean = get_boolean(env, cond);
-            push2(env, boolean, PAIR_TAG);
+            let boolean = get_boolean(environment, cond);
+            push2(environment, boolean, PAIR_TAG);
         }
 
         // lt
         13 => {
-            let x = pop(env);
-            let y = pop(env);
+            let x = pop(environment);
+            let y = pop(environment);
             let cond = unwrap_object(&x) < unwrap_object(&y);
-            let boolean = get_boolean(env, cond);
-            push2(env, boolean, PAIR_TAG);
+            let boolean = get_boolean(environment, cond);
+            push2(environment, boolean, PAIR_TAG);
         }
 
         // add
         14 => {
-            let x = pop(env);
-            let y = pop(env);
+            let x = pop(environment);
+            let y = pop(environment);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
             let add = Object::Number(num_x + num_y);
-            push2(env, add, PAIR_TAG);
+            push2(environment, add, PAIR_TAG);
         }
 
         // sub
         15 => {
-            let x = pop(env);
-            let y = pop(env);
+            let x = pop(environment);
+            let y = pop(environment);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
             let sub = Object::Number(num_x - num_y);
-            push2(env, sub, PAIR_TAG);
+            push2(environment, sub, PAIR_TAG);
         }
 
         // mul
         16 => {
-            let x = pop(env);
-            let y = pop(env);
+            let x = pop(environment);
+            let y = pop(environment);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
             let mul = Object::Number(num_x * num_y);
-            push2(env, mul, PAIR_TAG);
+            push2(environment, mul, PAIR_TAG);
         }
 
         // div
         17 => {
-            let x = pop(env);
-            let y = pop(env);
+            let x = pop(environment);
+            let y = pop(environment);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
             let div = Object::Number(num_x / num_y);
-            push2(env, div, PAIR_TAG);
+            push2(environment, div, PAIR_TAG);
         }
 
         // getc
@@ -739,10 +737,10 @@ fn primitive(env: &mut Environment, no: i64) {
 
         // putc
         19 => {
-            let x = pop(env);
+            let x = pop(environment);
             let chr = unwrap_object(&x) as u8 as char;
             print!("{}", chr);
         }
-        _ => exit_vm(EXIT_ILLEGAL_INSTR),
+        _ => exit_vm(EXIT_ILLEGAL_INSTRUCTION),
     }
 }
