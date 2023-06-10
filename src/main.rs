@@ -22,11 +22,11 @@ const SYMBOL_TAG: Object = tag_number(2);
 const STRING_TAG: Object = tag_number(3);
 const SINGLETON_TAG: Object = tag_number(5);
 
-const INSTR_APPLY: i64 = 0;
-const INSTR_SET: i64 = 1;
-const INSTR_GET: i64 = 2;
-const INSTR_CONSTANT: i64 = 3;
-const INSTR_IF: i64 = 4;
+const INSTRUCTION_APPLY: i64 = 0;
+const INSTRUCTION_SET: i64 = 1;
+const INSTRUCTION_GET: i64 = 2;
+const INSTRUCTION_CONSTANT: i64 = 3;
+const INSTRUCTION_IF: i64 = 4;
 const INSTRUCTION_HALT: i64 = 5;
 
 #[repr(i32)]
@@ -327,7 +327,7 @@ fn decode(environment: &mut Environment) {
         }
 
         if x > 90 {
-            op = INSTR_IF;
+            op = INSTRUCTION_IF;
             n = pop(environment);
         } else {
             if op == 0 {
@@ -399,7 +399,7 @@ fn run(environment: &mut Environment) {
 
         match unwrap_object(&instruction) as i64 {
             INSTRUCTION_HALT => exit(None),
-            INSTR_APPLY => {
+            INSTRUCTION_APPLY => {
                 let jump = get_tag(environment, environment.program_counter) == NUMBER_0;
 
                 if !is_rib(&code(environment)) {
@@ -454,7 +454,7 @@ fn run(environment: &mut Environment) {
                 }
             }
 
-            INSTR_SET => {
+            INSTRUCTION_SET => {
                 let x = pop(environment);
 
                 let rib = if !is_rib(&get_cdr(environment, environment.program_counter)) {
@@ -470,19 +470,19 @@ fn run(environment: &mut Environment) {
                 advance_program_counter(environment);
             }
 
-            INSTR_GET => {
+            INSTRUCTION_GET => {
                 let proc_obj = proc(environment);
                 push2(environment, proc_obj, PAIR_TAG);
                 advance_program_counter(environment);
             }
 
-            INSTR_CONSTANT => {
+            INSTRUCTION_CONSTANT => {
                 let cdr_obj = get_cdr(environment, environment.program_counter);
                 push2(environment, cdr_obj, PAIR_TAG);
                 advance_program_counter(environment);
             }
 
-            INSTR_IF => {
+            INSTRUCTION_IF => {
                 let p = unwrap_object(&pop(environment));
                 let false_unwraped = unwrap_object(&environment.r#false);
                 if p != false_unwraped {
