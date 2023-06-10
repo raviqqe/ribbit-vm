@@ -394,10 +394,10 @@ fn run(environment: &mut Environment) {
         let instruction = get_car(environment, environment.program_counter);
         println!("{}", unwrap_object(&instruction) as i64);
         advance_program_counter(environment);
-        let instr = get_car(environment, environment.program_counter);
-        println!("{}", unwrap_object(&instr) as i64);
+        let instruction = get_car(environment, environment.program_counter);
+        println!("{}", unwrap_object(&instruction) as i64);
 
-        match unwrap_object(&instr) as i64 {
+        match unwrap_object(&instruction) as i64 {
             INSTRUCTION_HALT => exit(None),
             INSTR_APPLY => {
                 let jump = get_tag(environment, environment.program_counter) == NUMBER_0;
@@ -449,7 +449,7 @@ fn run(environment: &mut Environment) {
                     environment.stack = s2;
 
                     let new_pc = get_car(environment, environment.program_counter);
-                    environment.heap[get_car_index(environment.program_counter)] = instr;
+                    environment.heap[get_car_index(environment.program_counter)] = instruction;
                     environment.program_counter = get_tag(environment, new_pc);
                 }
             }
