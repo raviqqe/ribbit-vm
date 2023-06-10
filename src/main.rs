@@ -263,23 +263,23 @@ fn main() {
     run(&mut environment);
 }
 
-fn build_sym_table(env: &mut Environment) {
-    let mut n = get_int(env, 0);
+fn build_sym_table(environment: &mut Environment) {
+    let mut n = get_int(environment, 0);
 
     while n > 0 {
         n -= 1;
-        let nil = get_nil(env);
-        env.symbol_table = create_sym(env, nil);
+        let nil = get_nil(environment);
+        environment.symbol_table = create_sym(environment, nil);
     }
 
-    let mut accum = get_nil(env);
+    let mut accum = get_nil(environment);
 
     loop {
-        let c = get_byte(env);
+        let c = get_byte(environment);
 
         if c == 44 {
-            env.symbol_table = create_sym(env, accum);
-            accum = get_nil(env);
+            environment.symbol_table = create_sym(environment, accum);
+            accum = get_nil(environment);
             continue;
         }
 
@@ -287,10 +287,10 @@ fn build_sym_table(env: &mut Environment) {
             break;
         }
 
-        accum = alloc_rib(env, tag_number(c as i64), accum, PAIR_TAG);
+        accum = alloc_rib(environment, tag_number(c as i64), accum, PAIR_TAG);
     }
 
-    env.symbol_table = create_sym(env, accum);
+    environment.symbol_table = create_sym(environment, accum);
 }
 
 fn set_global(env: &mut Environment, c: Object) {
