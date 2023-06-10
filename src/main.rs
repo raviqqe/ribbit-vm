@@ -246,14 +246,14 @@ fn main() {
         scan,
     };
 
-    let init_0 = alloc_rib(&mut environment, NUMBER_0, NUMBER_0, SINGLETON_TAG);
-    environment.r#false = alloc_rib(&mut environment, init_0, init_0, SINGLETON_TAG);
+    let init_0 = allocate_rib(&mut environment, NUMBER_0, NUMBER_0, SINGLETON_TAG);
+    environment.r#false = allocate_rib(&mut environment, init_0, init_0, SINGLETON_TAG);
 
     build_symbol_table(&mut environment);
     decode(&mut environment);
 
     let sym_table = environment.symbol_table;
-    let rib = alloc_rib(&mut environment, NUMBER_0, sym_table, CLOSURE_TAG);
+    let rib = allocate_rib(&mut environment, NUMBER_0, sym_table, CLOSURE_TAG);
     let fals = environment.r#false;
     let tru = get_true(&mut environment);
     let nil = get_nil(&mut environment);
@@ -291,7 +291,7 @@ fn build_symbol_table(environment: &mut Environment) {
             break;
         }
 
-        accum = alloc_rib(environment, tag_number(c as i64), accum, PAIR_TAG);
+        accum = allocate_rib(environment, tag_number(c as i64), accum, PAIR_TAG);
     }
 
     environment.symbol_table = create_symbol(environment, accum);
@@ -354,7 +354,7 @@ fn decode(env: &mut Environment) {
                 let obj = pop(env);
                 let rib2 = alloc_rib2(env, n, NUMBER_0, obj);
                 let nil = get_nil(env);
-                n = alloc_rib(env, rib2, nil, CLOSURE_TAG);
+                n = allocate_rib(env, rib2, nil, CLOSURE_TAG);
 
                 if unwrap_object(&env.stack) == unwrap_object(&NUMBER_0) {
                     break;
@@ -366,7 +366,7 @@ fn decode(env: &mut Environment) {
             }
         }
 
-        let c = alloc_rib(env, Object::Number(op as u64), n, Object::Number(0));
+        let c = allocate_rib(env, Object::Number(op as u64), n, Object::Number(0));
         env.heap[get_cdr_index(c)] = env.heap[get_tos_index(env)];
         env.heap[get_tos_index(env)] = c;
     }
@@ -421,11 +421,11 @@ fn run(environment: &mut Environment) {
                         code(environment);
 
                     let proc_obj = proc(environment);
-                    let mut s2 = alloc_rib(environment, NUMBER_0, proc_obj, PAIR_TAG);
+                    let mut s2 = allocate_rib(environment, NUMBER_0, proc_obj, PAIR_TAG);
 
                     for _ in 0..unwrap_object(&argc) {
                         let pop_obj = pop(environment);
-                        s2 = alloc_rib(environment, pop_obj, s2, PAIR_TAG);
+                        s2 = allocate_rib(environment, pop_obj, s2, PAIR_TAG);
                     }
 
                     let c2 =
@@ -498,12 +498,12 @@ fn run(environment: &mut Environment) {
 
 fn create_symbol(environment: &mut Environment, name: Object) -> Object {
     let len = list_length(environment, name);
-    let list = alloc_rib(environment, name, len, STRING_TAG);
-    let symbol = alloc_rib(environment, environment.r#false, list, SYMBOL_TAG);
-    alloc_rib(environment, symbol, environment.symbol_table, PAIR_TAG)
+    let list = allocate_rib(environment, name, len, STRING_TAG);
+    let symbol = allocate_rib(environment, environment.r#false, list, SYMBOL_TAG);
+    allocate_rib(environment, symbol, environment.symbol_table, PAIR_TAG)
 }
 
-fn alloc_rib(env: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
+fn allocate_rib(env: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
     push2(env, car, cdr);
     let old_stack = get_cdr(env, env.stack);
     let allocated = env.stack;
@@ -580,7 +580,7 @@ fn primitive(environment: &mut Environment, primitive: i64) {
     match primitive {
         // rib
         0 => {
-            let rib = alloc_rib(environment, NUMBER_0, NUMBER_0, NUMBER_0);
+            let rib = allocate_rib(environment, NUMBER_0, NUMBER_0, NUMBER_0);
             environment.heap[get_car_index(rib)] = pop(environment);
             environment.heap[get_cdr_index(rib)] = pop(environment);
             environment.heap[get_tag_index(rib)] = pop(environment);
@@ -612,7 +612,7 @@ fn primitive(environment: &mut Environment, primitive: i64) {
             let x = get_car(environment, Object::Number(tos_index as u64));
             let y = get_cdr(environment, environment.stack);
             tos_index = get_tos_index(environment);
-            environment.heap[tos_index] = alloc_rib(environment, x, y, CLOSURE_TAG);
+            environment.heap[tos_index] = allocate_rib(environment, x, y, CLOSURE_TAG);
         }
 
         // is rib?
