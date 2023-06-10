@@ -519,14 +519,14 @@ fn allocate_rib(environment: &mut Environment, car: Object, cdr: Object, tag: Ob
     Object::Rib(unwrap_object(&allocated))
 }
 
-fn alloc_rib2(env: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
-    push2(env, car, tag);
-    let old_stack = get_cdr(env, env.stack);
-    let allocated = env.stack;
+fn alloc_rib2(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
+    push2(environment, car, tag);
+    let old_stack = get_cdr(environment, environment.stack);
+    let allocated = environment.stack;
 
-    env.heap[get_cdr_index(allocated)] = cdr;
+    environment.heap[get_cdr_index(allocated)] = cdr;
 
-    env.stack = old_stack;
+    environment.stack = old_stack;
 
     Object::Rib(unwrap_object(&allocated))
 }
