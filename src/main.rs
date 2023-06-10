@@ -1,4 +1,8 @@
-use std::{convert::TryInto, io, io::Read, process};
+use std::{
+    convert::TryInto,
+    io::{stdin, Read},
+    process,
+};
 
 const RIB_FIELD_COUNT: usize = 3;
 const MAX_OBJECT_COUNT: u32 = 30_000;
@@ -719,7 +723,7 @@ fn primitive(env: &mut Environment, no: i64) {
         18 => {
             //
             let mut buff: [u8; 1] = [0];
-            io::stdin().read_exact(&mut buff);
+            stdin().read_exact(&mut buff);
             let _read = buff[0];
         }
 
