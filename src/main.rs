@@ -400,7 +400,7 @@ fn run(env: &mut Environment) {
 
                 if !is_rib(&code(env)) {
                     let code_obj = code(env);
-                    prim(env, unwrap_obj(&code_obj) as i64);
+                    primitive(env, unwrap_obj(&code_obj) as i64);
                     if jump {
                         env.pc = get_cont(env);
                         env.heap[get_cdr_index(env.stack)] = get_car(env, env.pc);
@@ -563,7 +563,7 @@ fn gc(env: &mut Environment) {
     env.alloc = to_space;
 }
 
-fn prim(env: &mut Environment, no: i64) {
+fn primitive(env: &mut Environment, no: i64) {
     match no {
         // rib
         0 => {
