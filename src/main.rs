@@ -57,12 +57,8 @@ const fn unwrap_object(object: &Object) -> u64 {
     }
 }
 
-const fn is_rib(obj: &Object) -> bool {
-    match obj {
-        Object::Number(_) => false,
-
-        Object::Rib(_) => true,
-    }
+const fn is_rib(object: &Object) -> bool {
+    matches!(object, Object::Rib(_))
 }
 
 struct Rib<'a> {
