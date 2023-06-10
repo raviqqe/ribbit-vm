@@ -15,12 +15,12 @@ const HEAP_MIDDLE: usize = HEAP_SIZE / 2;
 #[allow(dead_code)]
 const HEAP_TOP: usize = HEAP_SIZE - 1; // Last valid index
 
-const NUMBER_0: Object = tag_number(0);
-const PAIR_TAG: Object = tag_number(0);
-const CLOSURE_TAG: Object = tag_number(1);
-const SYMBOL_TAG: Object = tag_number(2);
-const STRING_TAG: Object = tag_number(3);
-const SINGLETON_TAG: Object = tag_number(5);
+const NUMBER_0: Value = tag_number(0);
+const PAIR_TAG: Value = tag_number(0);
+const CLOSURE_TAG: Value = tag_number(1);
+const SYMBOL_TAG: Value = tag_number(2);
+const STRING_TAG: Value = tag_number(3);
+const SINGLETON_TAG: Value = tag_number(5);
 
 const INSTRUCTION_APPLY: i64 = 0;
 const INSTRUCTION_SET: i64 = 1;
@@ -38,75 +38,75 @@ fn exit(code: Option<ExitCode>) -> ! {
     process::exit(code.map(|code| code as i32).unwrap_or(0))
 }
 
-const fn tag_number(number: i64) -> Object {
-    Object::Number(number as u64)
+const fn tag_number(number: i64) -> Value {
+    Value::Number(number as u64)
 }
 
-const fn tag_rib(number: u64) -> Object {
-    Object::Rib(number)
+const fn tag_rib(number: u64) -> Value {
+    Value::Rib(number)
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
-enum Object {
+enum Value {
     Number(u64),
     Rib(u64),
 }
 
-const fn unwrap_object(object: &Object) -> u64 {
+const fn unwrap_object(object: &Value) -> u64 {
     match object {
-        Object::Number(number) => *number,
-        Object::Rib(number) => *number,
+        Value::Number(number) => *number,
+        Value::Rib(number) => *number,
     }
 }
 
-const fn is_rib(object: &Object) -> bool {
-    matches!(object, Object::Rib(_))
+const fn is_rib(object: &Value) -> bool {
+    matches!(object, Value::Rib(_))
 }
 
 struct Rib<'a> {
-    fields: &'a [Object; RIB_FIELD_COUNT],
+    fields: &'a [Value; RIB_FIELD_COUNT],
 }
 
 struct Environment<'a> {
     // Roots
-    stack: Object,
-    program_counter: Object,
-    r#false: Object,
+    stack: Value,
+    program_counter: Value,
+    r#false: Value,
 
     position: usize,
     input: &'a [u8],
 
-    heap: &'a mut [Object; HEAP_SIZE],
-    symbol_table: Object,
+    heap: &'a mut [Value; HEAP_SIZE],
+    symbol_table: Value,
 
     allocation_index: usize,
     allocation_limit: usize,
     #[allow(dead_code)]
-    scan: *const Object,
+    scan: *const Value,
 }
 
 fn advance_program_counter(environment: &mut Environment) {
     environment.program_counter = get_tag(environment, environment.program_counter);
 }
 
-fn list_tail(env: &mut Environment, lst: usize, i: Object) -> usize {
+fn list_tail(env: &mut Environment, lst: usize, i: Value) -> usize {
     if unwrap_object(&i) == 0 {
         lst
     } else {
-        let rib = get_rib(env, Object::Number(lst as u64));
+        let rib = get_rib(env, Value::Number(lst as u64));
         let cdr = unwrap_object(&rib.fields[1]);
-        list_tail(env, cdr as usize, Object::Number(unwrap_object(&i) - 1))
+        list_tail(env, cdr as usize, Value::Number(unwrap_object(&i) - 1))
     }
 }
 
-fn symbol_ref(env: &mut Environment, n: Object) -> usize {
+fn symbol_ref(env: &mut Environment, n: Value) -> usize {
     let sym_table_idx = unwrap_object(&env.symbol_table) as usize;
     list_tail(env, sym_table_idx, n)
 }
 
-fn get_operand(environment: &mut Environment, object: Object) -> Object {
+fn get_operand(environment: &mut Environment, object: Value) -> Value {
     let rib_object = if !is_rib(&object) {
-        Object::Rib(list_tail(
+        Value::Rib(list_tail(
             environment,
             unwrap_object(&environment.stack) as usize,
             object,
@@ -119,17 +119,17 @@ fn get_operand(environment: &mut Environment, object: Object) -> Object {
     rib.fields[0]
 }
 
-fn proc(environment: &mut Environment) -> Object {
+fn proc(environment: &mut Environment) -> Value {
     let cdr = get_cdr(environment, environment.program_counter);
     get_operand(environment, cdr)
 }
 
-fn code(environment: &mut Environment) -> Object {
+fn code(environment: &mut Environment) -> Value {
     let proc_obj = proc(environment);
     get_car(environment, proc_obj)
 }
 
-fn get_continuation(environment: &mut Environment) -> Object {
+fn get_continuation(environment: &mut Environment) -> Value {
     let mut stack = environment.stack;
 
     while unwrap_object(&get_tag(environment, stack)) != 0 {
@@ -166,17 +166,17 @@ fn get_byte(environment: &mut Environment) -> u8 {
     byte
 }
 
-fn get_car_index(index: Object) -> usize {
+fn get_car_index(index: Value) -> usize {
     // TODO: Check this conversion
     unwrap_object(&index).try_into().unwrap()
 }
 
-fn get_cdr_index(index: Object) -> usize {
+fn get_cdr_index(index: Value) -> usize {
     // TODO: Check this conversion
     (unwrap_object(&index) + 1).try_into().unwrap()
 }
 
-fn get_tag_index(index: Object) -> usize {
+fn get_tag_index(index: Value) -> usize {
     // TODO: Check this conversion
     (unwrap_object(&index) + 2).try_into().unwrap()
 }
@@ -185,27 +185,27 @@ fn get_tos_index(env: &mut Environment) -> usize {
     get_car_index(env.stack)
 }
 
-fn get_car(environment: &mut Environment, index: Object) -> Object {
+fn get_car(environment: &mut Environment, index: Value) -> Value {
     get_rib(environment, index).fields[0]
 }
 
-fn get_cdr(environment: &mut Environment, index: Object) -> Object {
+fn get_cdr(environment: &mut Environment, index: Value) -> Value {
     get_rib(environment, index).fields[1]
 }
 
-fn get_tag(environment: &mut Environment, index: Object) -> Object {
+fn get_tag(environment: &mut Environment, index: Value) -> Value {
     get_rib(environment, index).fields[2]
 }
 
-fn get_true(environment: &mut Environment) -> Object {
+fn get_true(environment: &mut Environment) -> Value {
     get_car(environment, environment.r#false)
 }
 
-fn get_nil(environment: &mut Environment) -> Object {
+fn get_nil(environment: &mut Environment) -> Value {
     get_cdr(environment, environment.r#false)
 }
 
-fn get_boolean(environment: &mut Environment, value: bool) -> Object {
+fn get_boolean(environment: &mut Environment, value: bool) -> Value {
     if value {
         get_true(environment)
     } else {
@@ -213,7 +213,7 @@ fn get_boolean(environment: &mut Environment, value: bool) -> Object {
     }
 }
 
-fn get_rib<'a>(environment: &'a mut Environment, index: Object) -> Rib<'a> {
+fn get_rib<'a>(environment: &'a mut Environment, index: Value) -> Rib<'a> {
     let index = unwrap_object(&index) as usize;
 
     Rib {
@@ -228,7 +228,7 @@ fn main() {
     let input = String::from(");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y");
     // )@@
     let mut heap = [NUMBER_0; HEAP_SIZE];
-    let scan = &heap[0] as *const Object;
+    let scan = &heap[0] as *const Value;
 
     let mut environment = Environment {
         stack: NUMBER_0,
@@ -297,8 +297,8 @@ fn build_symbol_table(environment: &mut Environment) {
     environment.symbol_table = create_symbol(environment, accum);
 }
 
-fn set_global(environment: &mut Environment, object: Object) {
-    let index = Object::Number(get_car_index(environment.symbol_table) as u64);
+fn set_global(environment: &mut Environment, object: Value) {
+    let index = Value::Number(get_car_index(environment.symbol_table) as u64);
     environment.heap[get_car_index(index)] = object;
     environment.symbol_table = get_cdr(environment, environment.symbol_table);
 }
@@ -307,7 +307,7 @@ fn decode(environment: &mut Environment) {
     let weights = [20, 30, 0, 10, 11, 4];
 
     #[allow(unused_assignments)]
-    let mut n = Object::Number(0);
+    let mut n = Value::Number(0);
     #[allow(unused_assignments)]
     let mut d = 0;
     #[allow(unused_assignments)]
@@ -323,7 +323,7 @@ fn decode(environment: &mut Environment) {
             d = weights[op as usize];
             d + 2
         } {
-            n = Object::Number(unwrap_object(&n) - (d + 3));
+            n = Value::Number(unwrap_object(&n) - (d + 3));
         }
 
         if x > 90 {
@@ -340,11 +340,11 @@ fn decode(environment: &mut Environment) {
                 } else {
                     let num = (unwrap_object(&n) - d - 1) as i64;
                     let int = get_int(environment, num);
-                    Object::Rib(symbol_ref(environment, tag_number(int)) as u64)
+                    Value::Rib(symbol_ref(environment, tag_number(int)) as u64)
                 }
             } else {
                 n = if op < 3 {
-                    Object::Rib(symbol_ref(environment, n) as u64)
+                    Value::Rib(symbol_ref(environment, n) as u64)
                 } else {
                     n
                 }
@@ -366,7 +366,7 @@ fn decode(environment: &mut Environment) {
             }
         }
 
-        let c = allocate_rib(environment, Object::Number(op as u64), n, Object::Number(0));
+        let c = allocate_rib(environment, Value::Number(op as u64), n, Value::Number(0));
         environment.heap[get_cdr_index(c)] = environment.heap[get_tos_index(environment)];
         environment.heap[get_tos_index(environment)] = c;
     }
@@ -431,10 +431,9 @@ fn run(environment: &mut Environment) {
                         s2 = allocate_rib(environment, pop_obj, s2, PAIR_TAG);
                     }
 
-                    let c2 =
-                        Object::Number(
-                            list_tail(environment, unwrap_object(&s2) as usize, argc) as u64
-                        );
+                    let c2 = Value::Number(
+                        list_tail(environment, unwrap_object(&s2) as usize, argc) as u64,
+                    );
 
                     if jump {
                         let k = get_continuation(environment);
@@ -460,7 +459,7 @@ fn run(environment: &mut Environment) {
                 let rib = if !is_rib(&get_cdr(environment, environment.program_counter)) {
                     let cdr_obj = get_cdr(environment, environment.program_counter);
                     let stack = unwrap_object(&environment.stack) as usize;
-                    Object::Rib(list_tail(environment, stack, cdr_obj) as u64)
+                    Value::Rib(list_tail(environment, stack, cdr_obj) as u64)
                 } else {
                     get_cdr(environment, environment.program_counter)
                 };
@@ -499,14 +498,14 @@ fn run(environment: &mut Environment) {
     }
 }
 
-fn create_symbol(environment: &mut Environment, name: Object) -> Object {
+fn create_symbol(environment: &mut Environment, name: Value) -> Value {
     let len = list_length(environment, name);
     let list = allocate_rib(environment, name, len, STRING_TAG);
     let symbol = allocate_rib(environment, environment.r#false, list, SYMBOL_TAG);
     allocate_rib(environment, symbol, environment.symbol_table, PAIR_TAG)
 }
 
-fn allocate_rib(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
+fn allocate_rib(environment: &mut Environment, car: Value, cdr: Value, tag: Value) -> Value {
     push2(environment, car, cdr);
     let stack = get_cdr(environment, environment.stack);
     let allocated = environment.stack;
@@ -516,10 +515,10 @@ fn allocate_rib(environment: &mut Environment, car: Object, cdr: Object, tag: Ob
 
     environment.stack = stack;
 
-    Object::Rib(unwrap_object(&allocated))
+    Value::Rib(unwrap_object(&allocated))
 }
 
-fn alloc_rib2(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
+fn alloc_rib2(environment: &mut Environment, car: Value, cdr: Value, tag: Value) -> Value {
     push2(environment, car, tag);
     let old_stack = get_cdr(environment, environment.stack);
     let allocated = environment.stack;
@@ -528,16 +527,16 @@ fn alloc_rib2(environment: &mut Environment, car: Object, cdr: Object, tag: Obje
 
     environment.stack = old_stack;
 
-    Object::Rib(unwrap_object(&allocated))
+    Value::Rib(unwrap_object(&allocated))
 }
 
-fn pop(env: &mut Environment) -> Object {
-    let x = get_car(env, env.stack);
+fn pop(env: &mut Environment) -> Value {
+    let value = get_car(env, env.stack);
     env.stack = get_cdr(env, env.stack);
-    x
+    value
 }
 
-fn push2(environment: &mut Environment, car: Object, tag: Object) {
+fn push2(environment: &mut Environment, car: Value, tag: Value) {
     environment.heap[environment.allocation_index] = car;
     environment.allocation_index += 1;
 
@@ -554,7 +553,7 @@ fn push2(environment: &mut Environment, car: Object, tag: Object) {
     }
 }
 
-fn list_length(environment: &mut Environment, mut list: Object) -> Object {
+fn list_length(environment: &mut Environment, mut list: Value) -> Value {
     let mut len = 0;
 
     while is_rib(&list) && unwrap_object(&get_tag(environment, list)) == 0 {
@@ -626,7 +625,7 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
         }
         Primitive::Close => {
             let mut tos_index = get_tos_index(environment);
-            let x = get_car(environment, Object::Number(tos_index as u64));
+            let x = get_car(environment, Value::Number(tos_index as u64));
             let y = get_cdr(environment, environment.stack);
             tos_index = get_tos_index(environment);
             environment.heap[tos_index] = allocate_rib(environment, x, y, CLOSURE_TAG);
@@ -689,7 +688,7 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
             let y = pop(environment);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
-            let add = Object::Number(num_x + num_y);
+            let add = Value::Number(num_x + num_y);
             push2(environment, add, PAIR_TAG);
         }
         Primitive::Sub => {
@@ -697,7 +696,7 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
             let y = pop(environment);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
-            let sub = Object::Number(num_x - num_y);
+            let sub = Value::Number(num_x - num_y);
             push2(environment, sub, PAIR_TAG);
         }
         Primitive::Mul => {
@@ -705,7 +704,7 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
             let y = pop(environment);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
-            let mul = Object::Number(num_x * num_y);
+            let mul = Value::Number(num_x * num_y);
             push2(environment, mul, PAIR_TAG);
         }
         Primitive::Div => {
@@ -713,7 +712,7 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
             let y = pop(environment);
             let num_x = unwrap_object(&x);
             let num_y = unwrap_object(&y);
-            let div = Object::Number(num_x / num_y);
+            let div = Value::Number(num_x / num_y);
             push2(environment, div, PAIR_TAG);
         }
         Primitive::Getc => {
