@@ -89,13 +89,13 @@ fn advance_program_counter(environment: &mut Environment) {
     environment.program_counter = get_tag(environment, environment.program_counter);
 }
 
-fn list_tail(env: &mut Environment, lst: usize, i: Object) -> usize {
-    if unwrap_object(&i) == 0 {
-        lst
+fn list_tail(env: &mut Environment, list: usize, index: Object) -> usize {
+    if unwrap_object(&index) == 0 {
+        list
     } else {
-        let rib = get_rib(env, Object::Number(lst as u64));
+        let rib = get_rib(env, Object::Number(list as u64));
         let cdr = unwrap_object(&rib.fields[1]);
-        list_tail(env, cdr as usize, Object::Number(unwrap_object(&i) - 1))
+        list_tail(env, cdr as usize, Object::Number(unwrap_object(&index) - 1))
     }
 }
 
