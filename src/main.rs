@@ -227,7 +227,7 @@ fn main() {
     let mut heap = [NUMBER_0; HEAP_SIZE];
     let scan = &heap[0] as *const Object;
 
-    let mut env = Environment {
+    let mut environment = Environment {
         stack: NUMBER_0,
         program_counter: NUMBER_0,
         r#false: NUMBER_0,
@@ -242,25 +242,25 @@ fn main() {
         scan,
     };
 
-    let init_0 = alloc_rib(&mut env, NUMBER_0, NUMBER_0, SINGLETON_TAG);
-    env.r#false = alloc_rib(&mut env, init_0, init_0, SINGLETON_TAG);
+    let init_0 = alloc_rib(&mut environment, NUMBER_0, NUMBER_0, SINGLETON_TAG);
+    environment.r#false = alloc_rib(&mut environment, init_0, init_0, SINGLETON_TAG);
 
-    build_sym_table(&mut env);
-    decode(&mut env);
+    build_sym_table(&mut environment);
+    decode(&mut environment);
 
-    let sym_table = env.symbol_table;
-    let rib = alloc_rib(&mut env, NUMBER_0, sym_table, CLOSURE_TAG);
-    let fals = env.r#false;
-    let tru = get_true(&mut env);
-    let nil = get_nil(&mut env);
+    let sym_table = environment.symbol_table;
+    let rib = alloc_rib(&mut environment, NUMBER_0, sym_table, CLOSURE_TAG);
+    let fals = environment.r#false;
+    let tru = get_true(&mut environment);
+    let nil = get_nil(&mut environment);
 
-    set_global(&mut env, rib);
-    set_global(&mut env, fals);
-    set_global(&mut env, tru);
-    set_global(&mut env, nil);
+    set_global(&mut environment, rib);
+    set_global(&mut environment, fals);
+    set_global(&mut environment, tru);
+    set_global(&mut environment, nil);
 
-    setup_stack(&mut env);
-    run(&mut env);
+    setup_stack(&mut environment);
+    run(&mut environment);
 }
 
 fn build_sym_table(env: &mut Environment) {
