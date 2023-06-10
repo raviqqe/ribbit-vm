@@ -452,7 +452,6 @@ fn run(environment: &mut Environment) {
                     environment.program_counter = get_tag(environment, new_pc);
                 }
             }
-
             INSTRUCTION_SET => {
                 let x = pop(environment);
 
@@ -468,19 +467,16 @@ fn run(environment: &mut Environment) {
 
                 advance_program_counter(environment);
             }
-
             INSTRUCTION_GET => {
                 let proc_obj = proc(environment);
                 push2(environment, proc_obj, PAIR_TAG);
                 advance_program_counter(environment);
             }
-
             INSTRUCTION_CONSTANT => {
                 let cdr_obj = get_cdr(environment, environment.program_counter);
                 push2(environment, cdr_obj, PAIR_TAG);
                 advance_program_counter(environment);
             }
-
             INSTRUCTION_IF => {
                 let p = unwrap_object(&pop(environment));
                 let false_unwraped = unwrap_object(&environment.r#false);
