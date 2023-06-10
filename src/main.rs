@@ -137,13 +137,13 @@ fn get_continuation(environment: &mut Environment) -> Object {
     stack
 }
 
-fn get_int(env: &mut Environment, n: i64) -> i64 {
-    let x = get_code(env);
+fn get_int(environment: &mut Environment, n: i64) -> i64 {
+    let x = get_code(environment);
     let n = n * 46;
     if x < 46 {
         n + x
     } else {
-        get_int(env, n + x - 46)
+        get_int(environment, n + x - 46)
     }
 }
 
@@ -245,7 +245,7 @@ fn main() {
     let init_0 = alloc_rib(&mut environment, NUMBER_0, NUMBER_0, SINGLETON_TAG);
     environment.r#false = alloc_rib(&mut environment, init_0, init_0, SINGLETON_TAG);
 
-    build_sym_table(&mut environment);
+    build_symbol_table(&mut environment);
     decode(&mut environment);
 
     let sym_table = environment.symbol_table;
@@ -263,7 +263,7 @@ fn main() {
     run(&mut environment);
 }
 
-fn build_sym_table(environment: &mut Environment) {
+fn build_symbol_table(environment: &mut Environment) {
     let mut n = get_int(environment, 0);
 
     while n > 0 {
