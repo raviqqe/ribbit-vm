@@ -300,7 +300,7 @@ fn set_global(env: &mut Environment, c: Object) {
     env.symbol_table = get_cdr(env, env.symbol_table);
 }
 
-fn decode(env: &mut Environment) {
+fn decode(environment: &mut Environment) {
     let weights = [20, 30, 0, 10, 11, 4];
 
     #[allow(unused_assignments)]
@@ -311,7 +311,7 @@ fn decode(env: &mut Environment) {
     let mut op: i64 = -1;
 
     loop {
-        let x = get_code(env);
+        let x = get_code(environment);
         n = tag_number(x);
         op = -1;
 
@@ -325,35 +325,35 @@ fn decode(env: &mut Environment) {
 
         if x > 90 {
             op = INSTR_IF;
-            n = pop(env);
+            n = pop(environment);
         } else {
             if op == 0 {
-                push2(env, NUMBER_0, NUMBER_0);
+                push2(environment, NUMBER_0, NUMBER_0);
             }
 
             if unwrap_object(&n) >= d {
                 n = if unwrap_object(&n) == d {
-                    tag_number(get_int(env, 0))
+                    tag_number(get_int(environment, 0))
                 } else {
                     let num = (unwrap_object(&n) - d - 1) as i64;
-                    let int = get_int(env, num);
-                    Object::Rib(symbol_ref(env, tag_number(int)) as u64)
+                    let int = get_int(environment, num);
+                    Object::Rib(symbol_ref(environment, tag_number(int)) as u64)
                 }
             } else {
                 n = if op < 3 {
-                    Object::Rib(symbol_ref(env, n) as u64)
+                    Object::Rib(symbol_ref(environment, n) as u64)
                 } else {
                     n
                 }
             }
 
             if op > 4 {
-                let obj = pop(env);
-                let rib2 = alloc_rib2(env, n, NUMBER_0, obj);
-                let nil = get_nil(env);
-                n = allocate_rib(env, rib2, nil, CLOSURE_TAG);
+                let obj = pop(environment);
+                let rib2 = alloc_rib2(environment, n, NUMBER_0, obj);
+                let nil = get_nil(environment);
+                n = allocate_rib(environment, rib2, nil, CLOSURE_TAG);
 
-                if unwrap_object(&env.stack) == unwrap_object(&NUMBER_0) {
+                if unwrap_object(&environment.stack) == unwrap_object(&NUMBER_0) {
                     break;
                 }
             } else if op > 0 {
@@ -363,14 +363,14 @@ fn decode(env: &mut Environment) {
             }
         }
 
-        let c = allocate_rib(env, Object::Number(op as u64), n, Object::Number(0));
-        env.heap[get_cdr_index(c)] = env.heap[get_tos_index(env)];
-        env.heap[get_tos_index(env)] = c;
+        let c = allocate_rib(environment, Object::Number(op as u64), n, Object::Number(0));
+        environment.heap[get_cdr_index(c)] = environment.heap[get_tos_index(environment)];
+        environment.heap[get_tos_index(environment)] = c;
     }
 
-    let car = get_car(env, n);
-    let tag = get_tag(env, car);
-    env.program_counter = get_tag(env, tag);
+    let car = get_car(environment, n);
+    let tag = get_tag(environment, car);
+    environment.program_counter = get_tag(environment, tag);
 }
 
 fn setup_stack(environment: &mut Environment) {
