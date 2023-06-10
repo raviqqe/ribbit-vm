@@ -306,8 +306,11 @@ fn set_global(env: &mut Environment, c: Object) {
 fn decode(env: &mut Environment) {
     let weights = [20, 30, 0, 10, 11, 4];
 
+    #[allow(unused_assignments)]
     let mut n = Object::Num(0);
+    #[allow(unused_assignments)]
     let mut d = 0;
+    #[allow(unused_assignments)]
     let mut op: i64 = -1;
 
     loop {
