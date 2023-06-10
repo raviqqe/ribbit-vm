@@ -140,6 +140,7 @@ fn get_continuation(environment: &mut Environment) -> Object {
 fn get_int(environment: &mut Environment, n: i64) -> i64 {
     let x = get_code(environment);
     let n = n * 46;
+
     if x < 46 {
         n + x
     } else {
@@ -147,8 +148,9 @@ fn get_int(environment: &mut Environment, n: i64) -> i64 {
     }
 }
 
-fn get_code(env: &mut Environment) -> i64 {
-    let x: i64 = i64::from(get_byte(env)) - 35;
+fn get_code(environment: &mut Environment) -> i64 {
+    let x: i64 = i64::from(get_byte(environment)) - 35;
+
     if x < 0 {
         57
     } else {
