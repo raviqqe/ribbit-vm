@@ -83,6 +83,7 @@ struct Environment<'a> {
 
     alloc: usize,
     alloc_limit: usize,
+    #[allow(dead_code)]
     scan: *const Object,
 }
 
