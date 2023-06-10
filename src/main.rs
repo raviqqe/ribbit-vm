@@ -183,24 +183,24 @@ fn get_tos_index(env: &mut Environment) -> usize {
     get_car_index(env.stack)
 }
 
-fn get_car(env: &mut Environment, index: Object) -> Object {
-    get_rib(env, index).fields[0]
+fn get_car(environment: &mut Environment, index: Object) -> Object {
+    get_rib(environment, index).fields[0]
 }
 
-fn get_cdr(env: &mut Environment, index: Object) -> Object {
-    get_rib(env, index).fields[1]
+fn get_cdr(environment: &mut Environment, index: Object) -> Object {
+    get_rib(environment, index).fields[1]
 }
 
-fn get_tag(env: &mut Environment, index: Object) -> Object {
-    get_rib(env, index).fields[2]
+fn get_tag(environment: &mut Environment, index: Object) -> Object {
+    get_rib(environment, index).fields[2]
 }
 
-fn get_true(env: &mut Environment) -> Object {
-    get_car(env, env.r#false)
+fn get_true(environment: &mut Environment) -> Object {
+    get_car(environment, environment.r#false)
 }
 
-fn get_nil(env: &mut Environment) -> Object {
-    get_cdr(env, env.r#false)
+fn get_nil(environment: &mut Environment) -> Object {
+    get_cdr(environment, environment.r#false)
 }
 
 fn get_boolean(env: &mut Environment, cond: bool) -> Object {
