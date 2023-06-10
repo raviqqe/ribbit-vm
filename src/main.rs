@@ -77,8 +77,8 @@ struct Environment<'a> {
     heap: &'a mut [Object; HEAP_SIZE],
     symbol_table: Object,
 
-    alloc: usize,
-    alloc_limit: usize,
+    allocation_index: usize,
+    allocation_limit: usize,
     #[allow(dead_code)]
     scan: *const Object,
 }
@@ -238,8 +238,8 @@ fn main() {
         heap: &mut heap,
         symbol_table: NUMBER_0,
 
-        alloc: HEAP_BOTTOM,
-        alloc_limit: HEAP_MIDDLE,
+        allocation_index: HEAP_BOTTOM,
+        allocation_limit: HEAP_MIDDLE,
         scan,
     };
 
@@ -532,18 +532,18 @@ fn pop(env: &mut Environment) -> Object {
 }
 
 fn push2(environment: &mut Environment, car: Object, tag: Object) {
-    environment.heap[environment.alloc] = car;
-    environment.alloc += 1;
+    environment.heap[environment.allocation_index] = car;
+    environment.allocation_index += 1;
 
-    environment.heap[environment.alloc] = environment.stack;
-    environment.alloc += 1;
+    environment.heap[environment.allocation_index] = environment.stack;
+    environment.allocation_index += 1;
 
-    environment.heap[environment.alloc] = tag;
-    environment.alloc += 1;
+    environment.heap[environment.allocation_index] = tag;
+    environment.allocation_index += 1;
 
-    environment.stack = tag_rib((environment.alloc - RIB_FIELD_COUNT) as u64);
+    environment.stack = tag_rib((environment.allocation_index - RIB_FIELD_COUNT) as u64);
 
-    if environment.alloc == environment.alloc_limit {
+    if environment.allocation_index == environment.allocation_limit {
         // TODO: GC
     }
 }
@@ -563,14 +563,14 @@ fn list_length(env: &mut Environment, list: Object) -> Object {
 // TODO: Finish GC
 #[allow(dead_code)]
 fn gc(env: &mut Environment) {
-    let to_space = if env.alloc_limit == HEAP_MIDDLE {
+    let to_space = if env.allocation_limit == HEAP_MIDDLE {
         HEAP_MIDDLE
     } else {
         HEAP_BOTTOM
     };
-    env.alloc_limit = to_space + SPACE_SIZE as usize;
+    env.allocation_limit = to_space + SPACE_SIZE as usize;
 
-    env.alloc = to_space;
+    env.allocation_index = to_space;
 }
 
 fn primitive(environment: &mut Environment, primitive: i64) {
