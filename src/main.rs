@@ -224,7 +224,7 @@ fn main() {
     // @@(replace ");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y" (encode 92)
     let input = String::from(");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y");
     // )@@
-    let mut heap: [Object; HEAP_SIZE] = [Object::Number(0); HEAP_SIZE];
+    let mut heap = [NUMBER_0; HEAP_SIZE];
     let scan = &heap[0] as *const Object;
 
     let mut env = Environment {
