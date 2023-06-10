@@ -1,2 +1,3 @@
-# rbbit-vm
-Fork of Rust implementation of Ribbit 
+# ribbit-vm
+
+Fork of Rust implementation of Ribbit.
