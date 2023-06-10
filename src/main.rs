@@ -503,15 +503,15 @@ fn create_symbol(environment: &mut Environment, name: Object) -> Object {
     allocate_rib(environment, symbol, environment.symbol_table, PAIR_TAG)
 }
 
-fn allocate_rib(env: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
-    push2(env, car, cdr);
-    let old_stack = get_cdr(env, env.stack);
-    let allocated = env.stack;
+fn allocate_rib(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
+    push2(environment, car, cdr);
+    let old_stack = get_cdr(environment, environment.stack);
+    let allocated = environment.stack;
 
-    env.heap[get_cdr_index(allocated)] = env.heap[get_tag_index(allocated)];
-    env.heap[get_tag_index(allocated)] = tag;
+    environment.heap[get_cdr_index(allocated)] = environment.heap[get_tag_index(allocated)];
+    environment.heap[get_tag_index(allocated)] = tag;
 
-    env.stack = old_stack;
+    environment.stack = old_stack;
 
     Object::Rib(unwrap_object(&allocated))
 }
