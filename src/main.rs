@@ -68,7 +68,7 @@ struct Rib<'a> {
 struct Environment<'a> {
     // Roots
     stack: Object,
-    pc: Object,
+    program_counter: Object,
     r#false: Object,
 
     position: usize,
@@ -83,8 +83,8 @@ struct Environment<'a> {
     scan: *const Object,
 }
 
-fn advance_pc(env: &mut Environment) {
-    env.pc = get_tag(env, env.pc);
+fn advance_program_counter(environment: &mut Environment) {
+    environment.program_counter = get_tag(environment, environment.program_counter);
 }
 
 fn list_tail(env: &mut Environment, lst: usize, i: Object) -> usize {
@@ -118,7 +118,7 @@ fn get_operand(environment: &mut Environment, object: Object) -> Object {
 }
 
 fn proc(environment: &mut Environment) -> Object {
-    let cdr = get_cdr(environment, environment.pc);
+    let cdr = get_cdr(environment, environment.program_counter);
     get_operand(environment, cdr)
 }
 
@@ -233,7 +233,7 @@ fn init() {
 
     let mut env = Environment {
         stack: NUMBER_0,
-        pc: NUMBER_0,
+        program_counter: NUMBER_0,
         r#false: NUMBER_0,
 
         position: 0,
@@ -373,7 +373,7 @@ fn decode(env: &mut Environment) {
 
     let car = get_car(env, n);
     let tag = get_tag(env, car);
-    env.pc = get_tag(env, tag);
+    env.program_counter = get_tag(env, tag);
 }
 
 fn setup_stack(environment: &mut Environment) {
@@ -391,16 +391,16 @@ fn setup_stack(environment: &mut Environment) {
 
 fn run(env: &mut Environment) {
     loop {
-        let instr = get_car(env, env.pc);
+        let instr = get_car(env, env.program_counter);
         println!("{}", unwrap_object(&instr) as i64);
-        advance_pc(env);
-        let instr = get_car(env, env.pc);
+        advance_program_counter(env);
+        let instr = get_car(env, env.program_counter);
         println!("{}", unwrap_object(&instr) as i64);
 
         match unwrap_object(&instr) as i64 {
             INSTRUCTION_HALT => exit(None),
             INSTR_APPLY => {
-                let pc_tag = unwrap_object(&get_tag(env, env.pc));
+                let pc_tag = unwrap_object(&get_tag(env, env.program_counter));
                 let jump = pc_tag == unwrap_object(&NUMBER_0);
 
                 if !is_rib(&code(env)) {
@@ -409,15 +409,15 @@ fn run(env: &mut Environment) {
                     primitive(env, unwrap_object(&code_obj) as i64);
 
                     if jump {
-                        env.pc = get_continuation(env);
-                        env.heap[get_cdr_index(env.stack)] = get_car(env, env.pc);
+                        env.program_counter = get_continuation(env);
+                        env.heap[get_cdr_index(env.stack)] = get_car(env, env.program_counter);
                     }
 
-                    advance_pc(env);
+                    advance_program_counter(env);
                 } else {
                     let code_obj = code(env);
                     let argc = get_car(env, code_obj);
-                    env.heap[get_car_index(env.pc)] = code(env);
+                    env.heap[get_car_index(env.program_counter)] = code(env);
 
                     let proc_obj = proc(env);
                     let mut s2 = alloc_rib(env, NUMBER_0, proc_obj, PAIR_TAG);
@@ -436,52 +436,52 @@ fn run(env: &mut Environment) {
                         env.heap[get_tag_index(c2)] = get_tag(env, k);
                     } else {
                         env.heap[get_car_index(c2)] = env.stack;
-                        env.heap[get_tag_index(c2)] = get_tag(env, env.pc);
+                        env.heap[get_tag_index(c2)] = get_tag(env, env.program_counter);
                     }
 
                     env.stack = s2;
 
-                    let new_pc = get_car(env, env.pc);
-                    env.heap[get_car_index(env.pc)] = instr;
-                    env.pc = get_tag(env, new_pc);
+                    let new_pc = get_car(env, env.program_counter);
+                    env.heap[get_car_index(env.program_counter)] = instr;
+                    env.program_counter = get_tag(env, new_pc);
                 }
             }
 
             INSTR_SET => {
                 let x = pop(env);
 
-                let rib = if !is_rib(&get_cdr(env, env.pc)) {
-                    let cdr_obj = get_cdr(env, env.pc);
+                let rib = if !is_rib(&get_cdr(env, env.program_counter)) {
+                    let cdr_obj = get_cdr(env, env.program_counter);
                     let stack = unwrap_object(&env.stack) as usize;
                     Object::Rib(list_tail(env, stack, cdr_obj) as u64)
                 } else {
-                    get_cdr(env, env.pc)
+                    get_cdr(env, env.program_counter)
                 };
 
                 env.heap[get_car_index(rib)] = x;
 
-                advance_pc(env);
+                advance_program_counter(env);
             }
 
             INSTR_GET => {
                 let proc_obj = proc(env);
                 push2(env, proc_obj, PAIR_TAG);
-                advance_pc(env);
+                advance_program_counter(env);
             }
 
             INSTR_CONSTANT => {
-                let cdr_obj = get_cdr(env, env.pc);
+                let cdr_obj = get_cdr(env, env.program_counter);
                 push2(env, cdr_obj, PAIR_TAG);
-                advance_pc(env);
+                advance_program_counter(env);
             }
 
             INSTR_IF => {
                 let p = unwrap_object(&pop(env));
                 let false_unwraped = unwrap_object(&env.r#false);
                 if p != false_unwraped {
-                    env.pc = get_cdr(env, env.pc);
+                    env.program_counter = get_cdr(env, env.program_counter);
                 } else {
-                    env.pc = get_tag(env, env.pc);
+                    env.program_counter = get_tag(env, env.program_counter);
                 }
             }
 
