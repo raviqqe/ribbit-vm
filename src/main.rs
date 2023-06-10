@@ -44,7 +44,7 @@ const fn tag_rib(number: u64) -> Object {
     Object::Rib(number)
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 enum Object {
     Number(u64),
     Rib(u64),
@@ -221,10 +221,6 @@ fn get_rib_at<'a>(env: &'a mut Environment, index: Object) -> Rib<'a> {
 }
 
 fn main() {
-    init();
-}
-
-fn init() {
     // @@(replace ");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y" (encode 92)
     let input = String::from(");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y");
     // )@@
@@ -400,8 +396,7 @@ fn run(environment: &mut Environment) {
         match unwrap_object(&instr) as i64 {
             INSTRUCTION_HALT => exit(None),
             INSTR_APPLY => {
-                let pc_tag = unwrap_object(&get_tag(environment, environment.program_counter));
-                let jump = pc_tag == unwrap_object(&NUMBER_0);
+                let jump = get_tag(environment, environment.program_counter) == NUMBER_0;
 
                 if !is_rib(&code(environment)) {
                     let code_obj = code(environment);
