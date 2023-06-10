@@ -75,7 +75,7 @@ struct Environment<'a> {
     pc: Object,
     r#false: Object,
 
-    pos: usize,
+    position: usize,
     input: &'a [u8],
 
     heap: &'a mut [Object; HEAP_SIZE],
@@ -156,9 +156,9 @@ fn get_code(env: &mut Environment) -> i64 {
     }
 }
 
-fn get_byte(env: &mut Environment) -> u8 {
-    let byte = env.input[env.pos];
-    env.pos += 1;
+fn get_byte(environment: &mut Environment) -> u8 {
+    let byte = environment.input[environment.position];
+    environment.position += 1;
     byte
 }
 
@@ -238,7 +238,7 @@ fn init() {
         pc: NUM_0,
         r#false: NUM_0,
 
-        pos: 0,
+        position: 0,
         input: input.as_bytes(),
         heap: &mut heap,
         symbol_table: NUM_0,
