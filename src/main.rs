@@ -49,8 +49,8 @@ enum Object {
     Rib(u64),
 }
 
-const fn unwrap_object(obj: &Object) -> u64 {
-    match obj {
+const fn unwrap_object(object: &Object) -> u64 {
+    match object {
         Object::Number(num) => *num,
         Object::Rib(num) => *num,
     }
