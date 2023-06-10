@@ -576,8 +576,8 @@ fn gc(env: &mut Environment) {
     env.alloc = to_space;
 }
 
-fn primitive(environment: &mut Environment, no: i64) {
-    match no {
+fn primitive(environment: &mut Environment, primitive: i64) {
+    match primitive {
         // rib
         0 => {
             let rib = alloc_rib(environment, NUMBER_0, NUMBER_0, NUMBER_0);
