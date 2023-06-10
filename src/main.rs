@@ -167,11 +167,13 @@ fn get_car_index(index: Object) -> usize {
 }
 
 fn get_cdr_index(index: Object) -> usize {
-    (unwrap_object(&index) + 1).try_into().unwrap() // TODO: Check this conversion
+    (unwrap_object(&index) + 1).try_into().unwrap() // TODO: Check this
+                                                    // conversion
 }
 
 fn get_tag_index(index: Object) -> usize {
-    (unwrap_object(&index) + 2).try_into().unwrap() // TODO: Check this conversion
+    (unwrap_object(&index) + 2).try_into().unwrap() // TODO: Check this
+                                                    // conversion
 }
 
 fn get_tos_index(env: &mut Environment) -> usize {
@@ -207,10 +209,6 @@ fn get_boolean(env: &mut Environment, cond: bool) -> Object {
     } else {
         env.r#false
     }
-}
-
-fn get_tos(env: &mut Environment) -> Object {
-    get_car(env, env.stack)
 }
 
 fn get_rib_at<'a>(env: &'a mut Environment, index: Object) -> Rib<'a> {
@@ -737,10 +735,6 @@ fn primitive(env: &mut Environment, no: i64) {
             let chr = unwrap_object(&x) as u8 as char;
             print!("{}", chr);
         }
-
-        // default ERROR
-        _ => {
-            exit_vm(EXIT_ILLEGAL_INSTR);
-        }
+        _ => exit_vm(EXIT_ILLEGAL_INSTR),
     }
 }
