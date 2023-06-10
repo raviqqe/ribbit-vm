@@ -184,18 +184,15 @@ fn get_tos_index(env: &mut Environment) -> usize {
 }
 
 fn get_car(env: &mut Environment, index: Object) -> Object {
-    let rib = get_rib(env, index);
-    rib.fields[0]
+    get_rib(env, index).fields[0]
 }
 
 fn get_cdr(env: &mut Environment, index: Object) -> Object {
-    let rib = get_rib(env, index);
-    rib.fields[1]
+    get_rib(env, index).fields[1]
 }
 
 fn get_tag(env: &mut Environment, index: Object) -> Object {
-    let rib = get_rib(env, index);
-    rib.fields[2]
+    get_rib(env, index).fields[2]
 }
 
 fn get_true(env: &mut Environment) -> Object {
@@ -505,13 +502,13 @@ fn create_symbol(environment: &mut Environment, name: Object) -> Object {
 
 fn allocate_rib(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
     push2(environment, car, cdr);
-    let old_stack = get_cdr(environment, environment.stack);
+    let stack = get_cdr(environment, environment.stack);
     let allocated = environment.stack;
 
     environment.heap[get_cdr_index(allocated)] = environment.heap[get_tag_index(allocated)];
     environment.heap[get_tag_index(allocated)] = tag;
 
-    environment.stack = old_stack;
+    environment.stack = stack;
 
     Object::Rib(unwrap_object(&allocated))
 }
