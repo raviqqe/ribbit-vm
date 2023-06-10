@@ -36,12 +36,12 @@ fn exit(code: Option<ExitCode>) {
     process::exit(code.map(|code| code as i32).unwrap_or(0));
 }
 
-const fn tag_number(num: i64) -> Object {
-    Object::Number(num as u64)
+const fn tag_number(number: i64) -> Object {
+    Object::Number(number as u64)
 }
 
-const fn tag_rib(num: u64) -> Object {
-    Object::Rib(num)
+const fn tag_rib(number: u64) -> Object {
+    Object::Rib(number)
 }
 
 #[derive(Copy, Clone)]
