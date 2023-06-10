@@ -1,9 +1,9 @@
 use std::{convert::TryInto, io, io::Read, process};
 
-const RIB_NB_FIELDS: usize = 3;
-const MAX_NB_OBJS: u32 = 30_000;
-const SPACE_SZ: u32 = MAX_NB_OBJS * RIB_NB_FIELDS as u32;
-const HEAP_SIZE: usize = SPACE_SZ as usize * 2;
+const RIB_FIELD_COUNT: usize = 3;
+const MAX_OBJECT_COUNT: u32 = 30_000;
+const SPACE_SIZE: u32 = MAX_OBJECT_COUNT * RIB_FIELD_COUNT as u32;
+const HEAP_SIZE: usize = SPACE_SIZE as usize * 2;
 const HEAP_BOT: usize = 0;
 const HEAP_MID: usize = HEAP_SIZE / 2;
 const HEAP_TOP: usize = HEAP_SIZE - 1; // Last valid index
@@ -208,7 +208,7 @@ fn get_tos(env: &mut Environment) -> Obj {
 
 fn get_rib_at<'a>(env: &'a mut Environment, index: Obj) -> Rib<'a> {
     let start_index = unwrap_obj(&index) as usize;
-    let end_index = start_index + RIB_NB_FIELDS;
+    let end_index = start_index + RIB_FIELD_COUNT;
 
     Rib {
         fields: &env.heap[start_index..end_index],
@@ -532,7 +532,7 @@ fn push2(env: &mut Environment, car: Obj, tag: Obj) {
     env.heap[env.alloc] = tag;
     env.alloc += 1;
 
-    env.stack = tag_rib((env.alloc - RIB_NB_FIELDS) as u64);
+    env.stack = tag_rib((env.alloc - RIB_FIELD_COUNT) as u64);
 
     if env.alloc == env.alloc_limit {
         // TODO: GC
@@ -558,7 +558,7 @@ fn gc(env: &mut Environment) {
     } else {
         HEAP_BOT
     };
-    env.alloc_limit = to_space + SPACE_SZ as usize;
+    env.alloc_limit = to_space + SPACE_SIZE as usize;
 
     env.alloc = to_space;
 }
