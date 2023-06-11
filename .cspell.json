@@ -1,1 +1,1 @@
-{ "words": ["getc", "putc"] }
+{ "words": ["getc", "putc", "repr"] }
