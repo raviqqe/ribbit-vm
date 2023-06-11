@@ -479,8 +479,8 @@ fn run(environment: &mut Environment) {
             }
             INSTRUCTION_IF => {
                 let p = unwrap_object(&pop(environment));
-                let false_unwraped = unwrap_object(&environment.r#false);
-                if p != false_unwraped {
+                let false_unwrapped = unwrap_object(&environment.r#false);
+                if p != false_unwrapped {
                     environment.program_counter = get_cdr(environment, environment.program_counter);
                 } else {
                     environment.program_counter = get_tag(environment, environment.program_counter);
