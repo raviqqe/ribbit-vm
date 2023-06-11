@@ -275,14 +275,14 @@ fn build_symbol_table(environment: &mut Environment) {
         environment.symbol_table = create_symbol(environment, nil);
     }
 
-    let mut accum = get_nil(environment);
+    let mut name = get_nil(environment);
 
     loop {
         let c = get_byte(environment);
 
         if c == 44 {
-            environment.symbol_table = create_symbol(environment, accum);
-            accum = get_nil(environment);
+            environment.symbol_table = create_symbol(environment, name);
+            name = get_nil(environment);
             continue;
         }
 
@@ -290,10 +290,10 @@ fn build_symbol_table(environment: &mut Environment) {
             break;
         }
 
-        accum = allocate_rib(environment, tag_number(c as i64), accum, PAIR_TAG);
+        name = allocate_rib(environment, tag_number(c as i64), name, PAIR_TAG);
     }
 
-    environment.symbol_table = create_symbol(environment, accum);
+    environment.symbol_table = create_symbol(environment, name);
 }
 
 fn set_global(environment: &mut Environment, object: Object) {
