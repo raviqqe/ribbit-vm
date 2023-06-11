@@ -31,7 +31,7 @@ const INSTRUCTION_HALT: i64 = 5;
 
 #[repr(i32)]
 enum ExitCode {
-    IllegalInstructtion = 6,
+    IllegalInstruction = 6,
 }
 
 fn exit(code: Option<ExitCode>) -> ! {
@@ -488,7 +488,7 @@ fn run(environment: &mut Environment) {
             }
 
             _ => {
-                exit(Some(ExitCode::IllegalInstructtion));
+                exit(Some(ExitCode::IllegalInstruction));
             }
         }
     }
