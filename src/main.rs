@@ -167,17 +167,17 @@ fn get_byte(environment: &mut Environment) -> u8 {
 }
 
 fn get_car_index(index: Object) -> usize {
-    // TODO: Check this conversion
+    // TODO Check this conversion
     unwrap_object(&index).try_into().unwrap()
 }
 
 fn get_cdr_index(index: Object) -> usize {
-    // TODO: Check this conversion
+    // TODO Check this conversion
     (unwrap_object(&index) + 1).try_into().unwrap()
 }
 
 fn get_tag_index(index: Object) -> usize {
-    // TODO: Check this conversion
+    // TODO Check this conversion
     (unwrap_object(&index) + 2).try_into().unwrap()
 }
 
@@ -544,7 +544,7 @@ fn push(environment: &mut Environment, car: Object, tag: Object) {
     environment.stack = tag_rib((environment.allocation_index - RIB_FIELD_COUNT) as u64);
 
     if environment.allocation_index == environment.allocation_limit {
-        // TODO: GC
+        // TODO GC
     }
 }
 
@@ -559,7 +559,7 @@ fn list_length(environment: &mut Environment, mut list: Object) -> Object {
     tag_number(len)
 }
 
-// TODO: Finish GC
+// TODO Finish GC
 #[allow(dead_code)]
 fn gc(environment: &mut Environment) {
     let to_space = if environment.allocation_limit == HEAP_MIDDLE {
@@ -611,7 +611,7 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
         }
         Primitive::Pop => {
             pop(environment);
-            // TODO: Check what is the meaning of true?
+            // TODO Check what is the meaning of true?
         }
         Primitive::Skip => {
             let x = pop(environment);
