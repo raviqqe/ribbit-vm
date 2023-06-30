@@ -12,7 +12,7 @@ use std::{
     process,
 };
 
-const MAX_OBJECT_COUNT: u32 = 30_000;
+const MAX_OBJECT_COUNT: u32 = 1 << 14;
 const SPACE_SIZE: u32 = MAX_OBJECT_COUNT * rib::FIELD_COUNT as u32;
 const HEAP_SIZE: usize = SPACE_SIZE as usize * 2;
 const HEAP_BOTTOM: usize = 0;
