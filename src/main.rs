@@ -86,13 +86,13 @@ fn get_operand(vm: &mut Vm, object: Object) -> Object {
     vm.get_rib(rib).car()
 }
 
-fn proc(vm: &mut Vm) -> Object {
+fn get_procedure(vm: &mut Vm) -> Object {
     let cdr = vm.get_cdr(vm.program_counter);
     get_operand(vm, cdr)
 }
 
 fn code(vm: &mut Vm) -> Object {
-    let proc_obj = proc(vm);
+    let proc_obj = get_procedure(vm);
     vm.get_car(proc_obj)
 }
 
@@ -104,33 +104,6 @@ fn get_continuation(vm: &mut Vm) -> Object {
     }
 
     stack
-}
-
-fn get_int(vm: &mut Vm, n: i64) -> i64 {
-    let x = get_code(vm);
-    let n = n * 46;
-
-    if x < 46 {
-        n + x
-    } else {
-        get_int(vm, n + x - 46)
-    }
-}
-
-fn get_code(vm: &mut Vm) -> i64 {
-    let x: i64 = i64::from(get_byte(vm)) - 35;
-
-    if x < 0 {
-        57
-    } else {
-        x
-    }
-}
-
-fn get_byte(vm: &mut Vm) -> u8 {
-    let byte = vm.input[vm.position];
-    vm.position += 1;
-    byte
 }
 
 fn get_car_index(index: Object) -> usize {
@@ -149,7 +122,7 @@ fn get_tag_index(index: Object) -> usize {
 }
 
 fn build_symbol_table(vm: &mut Vm) {
-    let mut n = get_int(vm, 0);
+    let mut n = vm.get_input_int(0);
 
     while n > 0 {
         n -= 1;
@@ -160,7 +133,7 @@ fn build_symbol_table(vm: &mut Vm) {
     let mut name = vm.get_nil();
 
     loop {
-        let c = get_byte(vm);
+        let c = vm.get_input_byte();
 
         if c == 44 {
             vm.symbol_table = create_symbol(vm, name);
@@ -195,7 +168,7 @@ fn decode(vm: &mut Vm) {
     let mut op: i64 = -1;
 
     loop {
-        let x = get_code(vm);
+        let x = vm.get_input_code();
         n = Object::Number(x as u64);
         op = -1;
 
@@ -217,9 +190,9 @@ fn decode(vm: &mut Vm) {
 
             if n.to_raw() >= d {
                 n = if n.to_raw() == d {
-                    Object::Number(get_int(vm, 0) as u64)
+                    Object::Number(vm.get_input_int(0) as u64)
                 } else {
-                    let int = get_int(vm, (&n.to_raw() - d - 1) as i64);
+                    let int = vm.get_input_int((&n.to_raw() - d - 1) as i64);
                     Object::Rib(symbol_ref(vm, Object::Number(int as u64)) as u64)
                 }
             } else {
@@ -271,7 +244,7 @@ fn setup_stack(vm: &mut Vm) {
 }
 
 fn create_symbol(vm: &mut Vm, name: Object) -> Object {
-    let len = list_length(vm, name);
+    let len = vm.get_list_length(name);
     let list = allocate_rib(vm, name, len, STRING_TAG);
     let symbol = allocate_rib(vm, vm.r#false, list, SYMBOL_TAG);
     allocate_rib(vm, symbol, vm.symbol_table, PAIR_TAG)
@@ -300,17 +273,6 @@ fn allocate_rib2(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
     vm.stack = stack;
 
     Object::Rib(allocated.to_raw())
-}
-
-fn list_length(vm: &mut Vm, mut list: Object) -> Object {
-    let mut len = 0;
-
-    while list.is_rib() && vm.get_tag(list).to_raw() == 0 {
-        len += 1;
-        list = vm.get_cdr(list)
-    }
-
-    Object::Number(len)
 }
 
 #[derive(Clone, Copy, FromPrimitive)]
@@ -387,7 +349,7 @@ impl<'a> Vm<'a> {
                         let argc = self.get_car(code_object);
                         self.heap[get_car_index(self.program_counter)] = code(self);
 
-                        let proc_obj = proc(self);
+                        let proc_obj = get_procedure(self);
                         let mut s2 = allocate_rib(self, NUMBER_0, proc_obj, PAIR_TAG);
 
                         for _ in 0..argc.to_raw() {
@@ -429,7 +391,7 @@ impl<'a> Vm<'a> {
                     self.advance_program_counter();
                 }
                 INSTRUCTION_GET => {
-                    let proc_obj = proc(self);
+                    let proc_obj = get_procedure(self);
                     self.push(proc_obj, PAIR_TAG);
                     self.advance_program_counter();
                 }
@@ -507,7 +469,7 @@ impl<'a> Vm<'a> {
         self.get_car(self.r#false)
     }
 
-    fn get_nil(&mut self) -> Object {
+    fn get_nil(&self) -> Object {
         self.get_cdr(self.r#false)
     }
 
@@ -517,6 +479,44 @@ impl<'a> Vm<'a> {
         } else {
             self.r#false
         }
+    }
+
+    fn get_input_byte(&mut self) -> u8 {
+        let byte = self.input[self.position];
+        self.position += 1;
+        byte
+    }
+
+    fn get_input_code(&mut self) -> i64 {
+        let x = i64::from(self.get_input_byte()) - 35;
+
+        if x < 0 {
+            57
+        } else {
+            x
+        }
+    }
+
+    fn get_input_int(&mut self, number: i64) -> i64 {
+        let x = self.get_input_code();
+        let n = number * 46;
+
+        if x < 46 {
+            n + x
+        } else {
+            self.get_input_int(n + x - 46)
+        }
+    }
+
+    fn get_list_length(&mut self, mut list: Object) -> Object {
+        let mut len = 0;
+
+        while list.is_rib() && self.get_tag(list).to_raw() == 0 {
+            len += 1;
+            list = self.get_cdr(list)
+        }
+
+        Object::Number(len)
     }
 
     fn operate_primitive(&mut self, primitive: Primitive) {
