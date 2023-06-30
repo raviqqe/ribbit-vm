@@ -86,10 +86,6 @@ struct Environment<'a> {
     scan: *const Object,
 }
 
-fn advance_program_counter(environment: &mut Environment) {
-    environment.program_counter = get_tag(environment, environment.program_counter);
-}
-
 fn list_tail(env: &mut Environment, list: usize, index: Object) -> usize {
     if unwrap_object(&index) == 0 {
         list
@@ -328,10 +324,10 @@ fn decode(environment: &mut Environment) {
 
         if x > 90 {
             op = INSTRUCTION_IF as i64;
-            n = pop(environment);
+            n = environment.pop();
         } else {
             if op == 0 {
-                push(environment, NUMBER_0, NUMBER_0);
+                environment.push(NUMBER_0, NUMBER_0);
             }
 
             if unwrap_object(&n) >= d {
@@ -351,7 +347,7 @@ fn decode(environment: &mut Environment) {
             }
 
             if op > 4 {
-                let obj = pop(environment);
+                let obj = environment.pop();
                 let rib2 = alloc_rib2(environment, n, NUMBER_0, obj);
                 let nil = get_nil(environment);
                 n = allocate_rib(environment, rib2, nil, CLOSURE_TAG);
@@ -378,8 +374,8 @@ fn decode(environment: &mut Environment) {
 }
 
 fn setup_stack(environment: &mut Environment) {
-    push(environment, NUMBER_0, PAIR_TAG);
-    push(environment, NUMBER_0, PAIR_TAG);
+    environment.push(NUMBER_0, PAIR_TAG);
+    environment.push(NUMBER_0, PAIR_TAG);
 
     let first = get_cdr(environment, environment.stack);
     environment.heap[get_cdr_index(environment.stack)] = NUMBER_0;
@@ -394,7 +390,7 @@ fn run(environment: &mut Environment) {
     loop {
         let instruction = get_car(environment, environment.program_counter);
         println!("{}", unwrap_object(&instruction) as i64);
-        advance_program_counter(environment);
+        environment.advance_program_counter();
         let instruction = get_car(environment, environment.program_counter);
         println!("{}", unwrap_object(&instruction) as i64);
 
@@ -416,7 +412,7 @@ fn run(environment: &mut Environment) {
                             get_car(environment, environment.program_counter);
                     }
 
-                    advance_program_counter(environment);
+                    environment.advance_program_counter();
                 } else {
                     let code_object = code(environment);
                     let argc = get_car(environment, code_object);
@@ -427,7 +423,7 @@ fn run(environment: &mut Environment) {
                     let mut s2 = allocate_rib(environment, NUMBER_0, proc_obj, PAIR_TAG);
 
                     for _ in 0..unwrap_object(&argc) {
-                        let pop_obj = pop(environment);
+                        let pop_obj = environment.pop();
                         s2 = allocate_rib(environment, pop_obj, s2, PAIR_TAG);
                     }
 
@@ -454,7 +450,7 @@ fn run(environment: &mut Environment) {
                 }
             }
             INSTRUCTION_SET => {
-                let x = pop(environment);
+                let x = environment.pop();
 
                 let rib = if !is_rib(&get_cdr(environment, environment.program_counter)) {
                     let cdr_obj = get_cdr(environment, environment.program_counter);
@@ -466,20 +462,20 @@ fn run(environment: &mut Environment) {
 
                 environment.heap[get_car_index(rib)] = x;
 
-                advance_program_counter(environment);
+                environment.advance_program_counter();
             }
             INSTRUCTION_GET => {
                 let proc_obj = proc(environment);
-                push(environment, proc_obj, PAIR_TAG);
-                advance_program_counter(environment);
+                environment.push(proc_obj, PAIR_TAG);
+                environment.advance_program_counter();
             }
             INSTRUCTION_CONSTANT => {
-                let cdr_obj = get_cdr(environment, environment.program_counter);
-                push(environment, cdr_obj, PAIR_TAG);
-                advance_program_counter(environment);
+                let object = get_cdr(environment, environment.program_counter);
+                environment.push(object, PAIR_TAG);
+                environment.advance_program_counter();
             }
             INSTRUCTION_IF => {
-                let p = unwrap_object(&pop(environment));
+                let p = unwrap_object(&environment.pop());
                 let false_unwrapped = unwrap_object(&environment.r#false);
                 if p != false_unwrapped {
                     environment.program_counter = get_cdr(environment, environment.program_counter);
@@ -500,7 +496,7 @@ fn create_symbol(environment: &mut Environment, name: Object) -> Object {
 }
 
 fn allocate_rib(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
-    push(environment, car, cdr);
+    environment.push(car, cdr);
     let stack = get_cdr(environment, environment.stack);
     let allocated = environment.stack;
 
@@ -513,7 +509,7 @@ fn allocate_rib(environment: &mut Environment, car: Object, cdr: Object, tag: Ob
 }
 
 fn alloc_rib2(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
-    push(environment, car, tag);
+    environment.push(car, tag);
     let old_stack = get_cdr(environment, environment.stack);
     let allocated = environment.stack;
 
@@ -522,29 +518,6 @@ fn alloc_rib2(environment: &mut Environment, car: Object, cdr: Object, tag: Obje
     environment.stack = old_stack;
 
     Object::Rib(unwrap_object(&allocated))
-}
-
-fn pop(environment: &mut Environment) -> Object {
-    let value = get_car(environment, environment.stack);
-    environment.stack = get_cdr(environment, environment.stack);
-    value
-}
-
-fn push(environment: &mut Environment, car: Object, tag: Object) {
-    environment.heap[environment.allocation_index] = car;
-    environment.allocation_index += 1;
-
-    environment.heap[environment.allocation_index] = environment.stack;
-    environment.allocation_index += 1;
-
-    environment.heap[environment.allocation_index] = tag;
-    environment.allocation_index += 1;
-
-    environment.stack = tag_rib((environment.allocation_index - RIB_FIELD_COUNT) as u64);
-
-    if environment.allocation_index == environment.allocation_limit {
-        // TODO Run GC.
-    }
 }
 
 fn list_length(environment: &mut Environment, mut list: Object) -> Object {
@@ -556,19 +529,6 @@ fn list_length(environment: &mut Environment, mut list: Object) -> Object {
     }
 
     tag_number(len)
-}
-
-// TODO Finish GC
-#[allow(dead_code)]
-fn gc(environment: &mut Environment) {
-    let to_space = if environment.allocation_limit == HEAP_MIDDLE {
-        HEAP_MIDDLE
-    } else {
-        HEAP_BOTTOM
-    };
-
-    environment.allocation_limit = to_space + SPACE_SIZE as usize;
-    environment.allocation_index = to_space;
 }
 
 #[derive(Clone, Copy, FromPrimitive)]
@@ -596,27 +556,54 @@ enum Primitive {
 }
 
 impl<'a> Environment<'a> {
+    fn advance_program_counter(&mut self) {
+        self.program_counter = get_tag(self, self.program_counter);
+    }
+
+    fn pop(&mut self) -> Object {
+        let value = get_car(self, self.stack);
+        self.stack = get_cdr(self, self.stack);
+        value
+    }
+
+    fn push(&mut self, car: Object, tag: Object) {
+        self.heap[self.allocation_index] = car;
+        self.allocation_index += 1;
+
+        self.heap[self.allocation_index] = self.stack;
+        self.allocation_index += 1;
+
+        self.heap[self.allocation_index] = tag;
+        self.allocation_index += 1;
+
+        self.stack = tag_rib((self.allocation_index - RIB_FIELD_COUNT) as u64);
+
+        if self.allocation_index == self.allocation_limit {
+            // TODO Run GC.
+        }
+    }
+
     fn operate_primitive(&mut self, primitive: Primitive) {
         match primitive {
             Primitive::Rib => {
                 let rib = allocate_rib(self, NUMBER_0, NUMBER_0, NUMBER_0);
-                self.heap[get_car_index(rib)] = pop(self);
-                self.heap[get_cdr_index(rib)] = pop(self);
-                self.heap[get_tag_index(rib)] = pop(self);
-                push(self, rib, PAIR_TAG);
+                self.heap[get_car_index(rib)] = self.pop();
+                self.heap[get_cdr_index(rib)] = self.pop();
+                self.heap[get_tag_index(rib)] = self.pop();
+                self.push(rib, PAIR_TAG);
             }
             Primitive::Id => {
-                let x = pop(self);
-                push(self, x, PAIR_TAG);
+                let x = self.pop();
+                self.push(x, PAIR_TAG);
             }
             Primitive::Pop => {
-                pop(self);
+                self.pop();
                 // TODO Check what is the meaning of true?
             }
             Primitive::Skip => {
-                let x = pop(self);
-                pop(self);
-                push(self, x, PAIR_TAG);
+                let x = self.pop();
+                self.pop();
+                self.push(x, PAIR_TAG);
             }
             Primitive::Close => {
                 let mut tos_index = get_tos_index(self);
@@ -626,43 +613,43 @@ impl<'a> Environment<'a> {
                 self.heap[tos_index] = allocate_rib(self, x, y, CLOSURE_TAG);
             }
             Primitive::IsRib => {
-                let x = pop(self);
+                let x = self.pop();
                 let cond = is_rib(&x);
                 let boolean = get_boolean(self, cond);
-                push(self, boolean, PAIR_TAG);
+                self.push(boolean, PAIR_TAG);
             }
             Primitive::Field0 => {
-                let x = pop(self);
+                let x = self.pop();
                 let car = get_car(self, x);
-                push(self, car, PAIR_TAG);
+                self.push(car, PAIR_TAG);
             }
             Primitive::Field1 => {
-                let x = pop(self);
+                let x = self.pop();
                 let cdr = get_cdr(self, x);
-                push(self, cdr, PAIR_TAG);
+                self.push(cdr, PAIR_TAG);
             }
             Primitive::Field2 => {
-                let x = pop(self);
+                let x = self.pop();
                 let tag = get_tag(self, x);
-                push(self, tag, PAIR_TAG)
+                self.push(tag, PAIR_TAG)
             }
             Primitive::SetField0 => {
-                let x = pop(self);
-                let y = pop(self);
+                let x = self.pop();
+                let y = self.pop();
                 self.heap[get_car_index(x)] = y;
-                push(self, y, PAIR_TAG);
+                self.push(y, PAIR_TAG);
             }
             Primitive::SetField1 => {
-                let x = pop(self);
-                let y = pop(self);
+                let x = self.pop();
+                let y = self.pop();
                 self.heap[get_cdr_index(x)] = y;
-                push(self, y, PAIR_TAG);
+                self.push(y, PAIR_TAG);
             }
             Primitive::SetField2 => {
-                let x = pop(self);
-                let y = pop(self);
+                let x = self.pop();
+                let y = self.pop();
                 self.heap[get_tag_index(x)] = y;
-                push(self, y, PAIR_TAG);
+                self.push(y, PAIR_TAG);
             }
             Primitive::Equal => {
                 self.operate_comparison(|x, y| x == y);
@@ -688,10 +675,10 @@ impl<'a> Environment<'a> {
                 // TODO Handle errors.
                 stdin().read_exact(&mut buffer).unwrap();
 
-                push(self, Object::Number(buffer[0] as u64), PAIR_TAG);
+                self.push(Object::Number(buffer[0] as u64), PAIR_TAG);
             }
             Primitive::PutC => {
-                let x = pop(self);
+                let x = self.pop();
 
                 print!("{}", unwrap_object(&x) as u8 as char);
             }
@@ -699,21 +686,34 @@ impl<'a> Environment<'a> {
     }
 
     fn operate_binary(&mut self, operate: fn(u64, u64) -> u64) {
-        let x = pop(self);
-        let y = pop(self);
+        let x = self.pop();
+        let y = self.pop();
 
-        push(
-            self,
+        self.push(
             Object::Number(operate(unwrap_object(&x), unwrap_object(&y))),
             PAIR_TAG,
         );
     }
 
     fn operate_comparison(&mut self, operate: fn(u64, u64) -> bool) {
-        let x = pop(self);
-        let y = pop(self);
+        let x = self.pop();
+        let y = self.pop();
         let condition = get_boolean(self, operate(unwrap_object(&x), unwrap_object(&y)));
 
-        push(self, condition, PAIR_TAG);
+        self.push(condition, PAIR_TAG);
+    }
+
+    #[allow(dead_code)]
+    fn collect_garbages(&mut self) {
+        let to_space = if self.allocation_limit == HEAP_MIDDLE {
+            HEAP_MIDDLE
+        } else {
+            HEAP_BOTTOM
+        };
+
+        self.allocation_limit = to_space + SPACE_SIZE as usize;
+        self.allocation_index = to_space;
+
+        // TODO Finish GC
     }
 }
