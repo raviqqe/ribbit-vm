@@ -3,7 +3,9 @@ use num_traits::FromPrimitive;
 use std::{
     convert::TryInto,
     io::{stdin, Read},
+    ops::{Add, Div, Mul, Sub},
     process,
+    ptr::eq,
 };
 
 const RIB_FIELD_COUNT: usize = 3;
@@ -587,14 +589,14 @@ enum Primitive {
     SetField0,
     SetField1,
     SetField2,
-    Eq,
-    Lt,
+    Equal,
+    LessThan,
     Add,
-    Sub,
-    Mul,
-    Div,
-    Getc,
-    Putc,
+    Subtract,
+    Multiply,
+    Divide,
+    GetC,
+    PutC,
 }
 
 fn primitive(environment: &mut Environment, primitive: Primitive) {
@@ -665,61 +667,53 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
             environment.heap[get_tag_index(x)] = y;
             push2(environment, y, PAIR_TAG);
         }
-        Primitive::Eq => {
-            let x = pop(environment);
-            let y = pop(environment);
-            let cond = unwrap_object(&x) == unwrap_object(&y);
-            let boolean = get_boolean(environment, cond);
-            push2(environment, boolean, PAIR_TAG);
+        Primitive::Equal => {
+            operate_comparison(environment, |x, y| x == y);
         }
-        Primitive::Lt => {
-            let x = pop(environment);
-            let y = pop(environment);
-            let cond = unwrap_object(&x) < unwrap_object(&y);
-            let boolean = get_boolean(environment, cond);
-            push2(environment, boolean, PAIR_TAG);
+        Primitive::LessThan => {
+            operate_comparison(environment, |x, y| x < y);
         }
         Primitive::Add => {
-            let x = pop(environment);
-            let y = pop(environment);
-            let num_x = unwrap_object(&x);
-            let num_y = unwrap_object(&y);
-            let add = Object::Number(num_x + num_y);
-            push2(environment, add, PAIR_TAG);
+            operate_binary(environment, Add::add);
         }
-        Primitive::Sub => {
-            let x = pop(environment);
-            let y = pop(environment);
-            let num_x = unwrap_object(&x);
-            let num_y = unwrap_object(&y);
-            let sub = Object::Number(num_x - num_y);
-            push2(environment, sub, PAIR_TAG);
+        Primitive::Subtract => {
+            operate_binary(environment, Sub::sub);
         }
-        Primitive::Mul => {
-            let x = pop(environment);
-            let y = pop(environment);
-            let num_x = unwrap_object(&x);
-            let num_y = unwrap_object(&y);
-            let mul = Object::Number(num_x * num_y);
-            push2(environment, mul, PAIR_TAG);
+        Primitive::Multiply => {
+            operate_binary(environment, Mul::mul);
         }
-        Primitive::Div => {
-            let x = pop(environment);
-            let y = pop(environment);
-            let num_x = unwrap_object(&x);
-            let num_y = unwrap_object(&y);
-            let div = Object::Number(num_x / num_y);
-            push2(environment, div, PAIR_TAG);
+        Primitive::Divide => {
+            operate_binary(environment, Div::div);
         }
-        Primitive::Getc => {
+        Primitive::GetC => {
             let mut buff: [u8; 1] = [0];
             // TODO Handle errors.
             stdin().read_exact(&mut buff).unwrap();
             let _read = buff[0];
         }
-        Primitive::Putc => {
+        Primitive::PutC => {
             let x = pop(environment);
+
             print!("{}", unwrap_object(&x) as u8 as char);
         }
     }
+}
+
+fn operate_binary(environment: &mut Environment, operate: fn(u64, u64) -> u64) {
+    let x = pop(environment);
+    let y = pop(environment);
+
+    push2(
+        environment,
+        Object::Number(operate(unwrap_object(&x), unwrap_object(&y))),
+        PAIR_TAG,
+    );
+}
+
+fn operate_comparison(environment: &mut Environment, operate: fn(u64, u64) -> bool) {
+    let x = pop(environment);
+    let y = pop(environment);
+    let condition = get_boolean(environment, operate(unwrap_object(&x), unwrap_object(&y)));
+
+    push2(environment, condition, PAIR_TAG);
 }
