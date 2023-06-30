@@ -5,7 +5,6 @@ use std::{
     io::{stdin, Read},
     ops::{Add, Div, Mul, Sub},
     process,
-    ptr::eq,
 };
 
 const RIB_FIELD_COUNT: usize = 3;
