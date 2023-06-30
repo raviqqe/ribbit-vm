@@ -713,7 +713,7 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
         }
         Primitive::Getc => {
             let mut buff: [u8; 1] = [0];
-            // TODO
+            // TODO Handle errors.
             stdin().read_exact(&mut buff).unwrap();
             let _read = buff[0];
         }
