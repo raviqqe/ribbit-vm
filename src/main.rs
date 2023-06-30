@@ -481,33 +481,6 @@ impl<'a> Vm<'a> {
         }
     }
 
-    fn get_input_byte(&mut self) -> u8 {
-        let byte = self.input[self.position];
-        self.position += 1;
-        byte
-    }
-
-    fn get_input_code(&mut self) -> i64 {
-        let x = i64::from(self.get_input_byte()) - 35;
-
-        if x < 0 {
-            57
-        } else {
-            x
-        }
-    }
-
-    fn get_input_int(&mut self, number: i64) -> i64 {
-        let x = self.get_input_code();
-        let n = number * 46;
-
-        if x < 46 {
-            n + x
-        } else {
-            self.get_input_int(n + x - 46)
-        }
-    }
-
     fn get_list_length(&mut self, mut list: Object) -> Object {
         let mut len = 0;
 
@@ -647,6 +620,35 @@ impl<'a> Vm<'a> {
         self.allocation_index = to_space;
 
         // TODO Finish GC
+    }
+
+    // Decoding
+
+    fn get_input_byte(&mut self) -> u8 {
+        let byte = self.input[self.position];
+        self.position += 1;
+        byte
+    }
+
+    fn get_input_code(&mut self) -> i64 {
+        let x = i64::from(self.get_input_byte()) - 35;
+
+        if x < 0 {
+            57
+        } else {
+            x
+        }
+    }
+
+    fn get_input_int(&mut self, number: i64) -> i64 {
+        let x = self.get_input_code();
+        let n = number * 46;
+
+        if x < 46 {
+            n + x
+        } else {
+            self.get_input_int(n + x - 46)
+        }
     }
 }
 
