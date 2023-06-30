@@ -17,8 +17,9 @@ const HEAP_MIDDLE: usize = HEAP_SIZE / 2;
 #[allow(dead_code)]
 const HEAP_TOP: usize = HEAP_SIZE;
 
-const NUMBER_0: Object = Object::Number(0);
-const PAIR_TAG: Object = Object::Number(0);
+const ZERO: Object = Object::Number(0);
+
+const PAIR_TAG: Object = ZERO;
 const CLOSURE_TAG: Object = Object::Number(1);
 const SYMBOL_TAG: Object = Object::Number(2);
 const STRING_TAG: Object = Object::Number(3);
@@ -73,15 +74,15 @@ fn set_global(vm: &mut Vm, object: Object) {
 }
 
 fn setup_stack(vm: &mut Vm) {
-    vm.push(NUMBER_0, PAIR_TAG);
-    vm.push(NUMBER_0, PAIR_TAG);
+    vm.push(ZERO, PAIR_TAG);
+    vm.push(ZERO, PAIR_TAG);
 
     let first = vm.get_cdr(vm.stack);
-    vm.heap[get_cdr_index(vm.stack)] = NUMBER_0;
+    vm.heap[get_cdr_index(vm.stack)] = ZERO;
     vm.heap[get_tag_index(vm.stack)] = first;
 
     vm.heap[get_car_index(first)] = Object::Number(Instruction::Halt as u64);
-    vm.heap[get_cdr_index(first)] = NUMBER_0;
+    vm.heap[get_cdr_index(first)] = ZERO;
     vm.heap[get_tag_index(first)] = PAIR_TAG;
 }
 
@@ -120,14 +121,14 @@ fn allocate_rib2(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
 impl<'a> Vm<'a> {
     pub fn new(input: &'a [u8]) -> Self {
         let mut vm = Self {
-            stack: NUMBER_0,
-            program_counter: NUMBER_0,
-            r#false: NUMBER_0,
+            stack: ZERO,
+            program_counter: ZERO,
+            r#false: ZERO,
 
             position: 0,
             input,
-            heap: [NUMBER_0; HEAP_SIZE],
-            symbol_table: NUMBER_0,
+            heap: [ZERO; HEAP_SIZE],
+            symbol_table: ZERO,
 
             allocation_index: HEAP_BOTTOM,
             allocation_limit: HEAP_MIDDLE,
@@ -140,14 +141,14 @@ impl<'a> Vm<'a> {
     }
 
     fn initialize(&mut self) {
-        let init_0 = allocate_rib(self, NUMBER_0, NUMBER_0, SINGLETON_TAG);
+        let init_0 = allocate_rib(self, ZERO, ZERO, SINGLETON_TAG);
         self.r#false = allocate_rib(self, init_0, init_0, SINGLETON_TAG);
 
         self.decode_symbol_table();
         self.decode_codes();
 
         let symbol_table = self.symbol_table;
-        let rib = allocate_rib(self, NUMBER_0, symbol_table, CLOSURE_TAG);
+        let rib = allocate_rib(self, ZERO, symbol_table, CLOSURE_TAG);
         let r#false = self.r#false;
         let r#true = self.get_true();
         let nil = self.get_nil();
@@ -171,7 +172,7 @@ impl<'a> Vm<'a> {
             match instruction.to_raw() {
                 Instruction::HALT => exit(None),
                 Instruction::APPLY => {
-                    let jump = self.get_tag(self.program_counter) == NUMBER_0;
+                    let jump = self.get_tag(self.program_counter) == ZERO;
                     let code = self.get_code();
 
                     if !code.is_rib() {
@@ -192,7 +193,7 @@ impl<'a> Vm<'a> {
                         self.heap[get_car_index(self.program_counter)] = self.get_code();
 
                         let procedure = self.get_procedure();
-                        let mut s2 = allocate_rib(self, NUMBER_0, procedure, PAIR_TAG);
+                        let mut s2 = allocate_rib(self, ZERO, procedure, PAIR_TAG);
 
                         for _ in 0..argument_count.to_raw() {
                             let pop_obj = self.pop();
@@ -376,7 +377,7 @@ impl<'a> Vm<'a> {
     fn operate_primitive(&mut self, primitive: Primitive) {
         match primitive {
             Primitive::Rib => {
-                let rib = allocate_rib(self, NUMBER_0, NUMBER_0, NUMBER_0);
+                let rib = allocate_rib(self, ZERO, ZERO, ZERO);
                 self.heap[get_car_index(rib)] = self.pop();
                 self.heap[get_cdr_index(rib)] = self.pop();
                 self.heap[get_tag_index(rib)] = self.pop();
@@ -541,7 +542,7 @@ impl<'a> Vm<'a> {
         let weights = [20, 30, 0, 10, 11, 4];
 
         #[allow(unused_assignments)]
-        let mut n = Object::Number(0);
+        let mut n = ZERO;
         #[allow(unused_assignments)]
         let mut d = 0;
         #[allow(unused_assignments)]
@@ -565,7 +566,7 @@ impl<'a> Vm<'a> {
                 n = self.pop();
             } else {
                 if op == 0 {
-                    self.push(NUMBER_0, NUMBER_0);
+                    self.push(ZERO, ZERO);
                 }
 
                 if n.to_raw() >= d {
@@ -581,11 +582,11 @@ impl<'a> Vm<'a> {
 
                 if op > 4 {
                     let obj = self.pop();
-                    let rib2 = allocate_rib2(self, n, NUMBER_0, obj);
+                    let rib2 = allocate_rib2(self, n, ZERO, obj);
                     let nil = self.get_nil();
                     n = allocate_rib(self, rib2, nil, CLOSURE_TAG);
 
-                    if self.stack.to_raw() == NUMBER_0.to_raw() {
+                    if self.stack.to_raw() == ZERO.to_raw() {
                         break;
                     }
                 } else if op > 0 {
@@ -595,7 +596,7 @@ impl<'a> Vm<'a> {
                 }
             }
 
-            let c = allocate_rib(self, Object::Number(op as u64), n, Object::Number(0));
+            let c = allocate_rib(self, Object::Number(op as u64), n, ZERO);
             self.heap[get_cdr_index(c)] = self.heap[self.get_tos_index()];
             self.heap[self.get_tos_index()] = c;
         }
