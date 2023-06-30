@@ -68,7 +68,7 @@ struct Rib<'a> {
     fields: &'a [Object; RIB_FIELD_COUNT],
 }
 
-struct Environment<'a> {
+struct Vm<'a> {
     // Roots
     stack: Object,
     program_counter: Object,
@@ -86,68 +86,64 @@ struct Environment<'a> {
     scan: *const Object,
 }
 
-fn list_tail(env: &mut Environment, list: usize, index: Object) -> usize {
+fn list_tail(vm: &mut Vm, list: usize, index: Object) -> usize {
     if unwrap_object(&index) == 0 {
         list
     } else {
-        let rib = get_rib(env, Object::Number(list as u64));
+        let rib = get_rib(vm, Object::Number(list as u64));
         let cdr = unwrap_object(&rib.fields[1]);
-        list_tail(env, cdr as usize, Object::Number(unwrap_object(&index) - 1))
+        list_tail(vm, cdr as usize, Object::Number(unwrap_object(&index) - 1))
     }
 }
 
-fn symbol_ref(env: &mut Environment, n: Object) -> usize {
-    let sym_table_idx = unwrap_object(&env.symbol_table) as usize;
-    list_tail(env, sym_table_idx, n)
+fn symbol_ref(vm: &mut Vm, n: Object) -> usize {
+    let sym_table_idx = unwrap_object(&vm.symbol_table) as usize;
+    list_tail(vm, sym_table_idx, n)
 }
 
-fn get_operand(environment: &mut Environment, object: Object) -> Object {
+fn get_operand(vm: &mut Vm, object: Object) -> Object {
     let rib = if !is_rib(&object) {
-        Object::Rib(list_tail(
-            environment,
-            unwrap_object(&environment.stack) as usize,
-            object,
-        ) as u64)
+        Object::Rib(list_tail(vm, unwrap_object(&vm.stack) as usize, object) as u64)
     } else {
         object
     };
 
-    get_rib(environment, rib).fields[0]
+    get_rib(vm, rib).fields[0]
 }
 
-fn proc(environment: &mut Environment) -> Object {
-    let cdr = get_cdr(environment, environment.program_counter);
-    get_operand(environment, cdr)
+fn proc(vm: &mut Vm) -> Object {
+    let cdr = get_cdr(vm, vm.program_counter);
+    get_operand(vm, cdr)
 }
 
-fn code(environment: &mut Environment) -> Object {
-    let proc_obj = proc(environment);
-    get_car(environment, proc_obj)
+fn code(vm: &mut Vm) -> Object {
+    let proc_obj = proc(vm);
+    get_car(vm, proc_obj)
 }
 
-fn get_continuation(environment: &mut Environment) -> Object {
-    let mut stack = environment.stack;
+fn get_continuation(vm: &mut Vm) -> Object {
+    let mut stack = vm.stack;
 
-    while unwrap_object(&get_tag(environment, stack)) != 0 {
-        stack = get_cdr(environment, stack);
+    while unwrap_object(&get_tag(vm, stack)) != 0 {
+        stack = get_cdr(vm, stack);
     }
 
     stack
 }
 
-fn get_int(environment: &mut Environment, n: i64) -> i64 {
-    let x = get_code(environment);
+fn get_int(vm: &mut Vm, n: i64) -> i64 {
+    let x = get_code(vm);
     let n = n * 46;
 
     if x < 46 {
         n + x
     } else {
-        get_int(environment, n + x - 46)
+        get_int(vm, n + x - 46)
     }
 }
 
-fn get_code(environment: &mut Environment) -> i64 {
-    let x: i64 = i64::from(get_byte(environment)) - 35;
+fn get_code(vm: &mut Vm) -> i64 {
+    let x: i64 = i64::from(get_byte(vm)) - 35;
 
     if x < 0 {
         57
@@ -156,9 +152,9 @@ fn get_code(environment: &mut Environment) -> i64 {
     }
 }
 
-fn get_byte(environment: &mut Environment) -> u8 {
-    let byte = environment.input[environment.position];
-    environment.position += 1;
+fn get_byte(vm: &mut Vm) -> u8 {
+    let byte = vm.input[vm.position];
+    vm.position += 1;
     byte
 }
 
@@ -177,45 +173,43 @@ fn get_tag_index(index: Object) -> usize {
     (unwrap_object(&index) + 2).try_into().unwrap()
 }
 
-fn get_tos_index(env: &mut Environment) -> usize {
-    get_car_index(env.stack)
+fn get_tos_index(vm: &mut Vm) -> usize {
+    get_car_index(vm.stack)
 }
 
-fn get_car(environment: &mut Environment, index: Object) -> Object {
-    get_rib(environment, index).fields[0]
+fn get_car(vm: &mut Vm, index: Object) -> Object {
+    get_rib(vm, index).fields[0]
 }
 
-fn get_cdr(environment: &mut Environment, index: Object) -> Object {
-    get_rib(environment, index).fields[1]
+fn get_cdr(vm: &mut Vm, index: Object) -> Object {
+    get_rib(vm, index).fields[1]
 }
 
-fn get_tag(environment: &mut Environment, index: Object) -> Object {
-    get_rib(environment, index).fields[2]
+fn get_tag(vm: &mut Vm, index: Object) -> Object {
+    get_rib(vm, index).fields[2]
 }
 
-fn get_true(environment: &mut Environment) -> Object {
-    get_car(environment, environment.r#false)
+fn get_true(vm: &mut Vm) -> Object {
+    get_car(vm, vm.r#false)
 }
 
-fn get_nil(environment: &mut Environment) -> Object {
-    get_cdr(environment, environment.r#false)
+fn get_nil(vm: &mut Vm) -> Object {
+    get_cdr(vm, vm.r#false)
 }
 
-fn get_boolean(environment: &mut Environment, value: bool) -> Object {
+fn get_boolean(vm: &mut Vm, value: bool) -> Object {
     if value {
-        get_true(environment)
+        get_true(vm)
     } else {
-        environment.r#false
+        vm.r#false
     }
 }
 
-fn get_rib<'a>(environment: &'a mut Environment, index: Object) -> Rib<'a> {
+fn get_rib<'a>(vm: &'a mut Vm, index: Object) -> Rib<'a> {
     let index = unwrap_object(&index) as usize;
 
     Rib {
-        fields: environment.heap[index..index + RIB_FIELD_COUNT]
-            .try_into()
-            .unwrap(),
+        fields: vm.heap[index..index + RIB_FIELD_COUNT].try_into().unwrap(),
     }
 }
 
@@ -226,7 +220,7 @@ fn main() {
     let mut heap = [NUMBER_0; HEAP_SIZE];
     let scan = &heap[0] as *const Object;
 
-    let mut environment = Environment {
+    let mut vm = Vm {
         stack: NUMBER_0,
         program_counter: NUMBER_0,
         r#false: NUMBER_0,
@@ -241,45 +235,45 @@ fn main() {
         scan,
     };
 
-    let init_0 = allocate_rib(&mut environment, NUMBER_0, NUMBER_0, SINGLETON_TAG);
-    environment.r#false = allocate_rib(&mut environment, init_0, init_0, SINGLETON_TAG);
+    let init_0 = allocate_rib(&mut vm, NUMBER_0, NUMBER_0, SINGLETON_TAG);
+    vm.r#false = allocate_rib(&mut vm, init_0, init_0, SINGLETON_TAG);
 
-    build_symbol_table(&mut environment);
-    decode(&mut environment);
+    build_symbol_table(&mut vm);
+    decode(&mut vm);
 
-    let symbol_table = environment.symbol_table;
-    let rib = allocate_rib(&mut environment, NUMBER_0, symbol_table, CLOSURE_TAG);
-    let r#false = environment.r#false;
-    let r#true = get_true(&mut environment);
-    let nil = get_nil(&mut environment);
+    let symbol_table = vm.symbol_table;
+    let rib = allocate_rib(&mut vm, NUMBER_0, symbol_table, CLOSURE_TAG);
+    let r#false = vm.r#false;
+    let r#true = get_true(&mut vm);
+    let nil = get_nil(&mut vm);
 
-    set_global(&mut environment, rib);
-    set_global(&mut environment, r#false);
-    set_global(&mut environment, r#true);
-    set_global(&mut environment, nil);
+    set_global(&mut vm, rib);
+    set_global(&mut vm, r#false);
+    set_global(&mut vm, r#true);
+    set_global(&mut vm, nil);
 
-    setup_stack(&mut environment);
+    setup_stack(&mut vm);
 
-    run(&mut environment);
+    run(&mut vm);
 }
 
-fn build_symbol_table(environment: &mut Environment) {
-    let mut n = get_int(environment, 0);
+fn build_symbol_table(vm: &mut Vm) {
+    let mut n = get_int(vm, 0);
 
     while n > 0 {
         n -= 1;
-        let nil = get_nil(environment);
-        environment.symbol_table = create_symbol(environment, nil);
+        let nil = get_nil(vm);
+        vm.symbol_table = create_symbol(vm, nil);
     }
 
-    let mut name = get_nil(environment);
+    let mut name = get_nil(vm);
 
     loop {
-        let c = get_byte(environment);
+        let c = get_byte(vm);
 
         if c == 44 {
-            environment.symbol_table = create_symbol(environment, name);
-            name = get_nil(environment);
+            vm.symbol_table = create_symbol(vm, name);
+            name = get_nil(vm);
             continue;
         }
 
@@ -287,19 +281,19 @@ fn build_symbol_table(environment: &mut Environment) {
             break;
         }
 
-        name = allocate_rib(environment, tag_number(c as i64), name, PAIR_TAG);
+        name = allocate_rib(vm, tag_number(c as i64), name, PAIR_TAG);
     }
 
-    environment.symbol_table = create_symbol(environment, name);
+    vm.symbol_table = create_symbol(vm, name);
 }
 
-fn set_global(environment: &mut Environment, object: Object) {
-    let index = Object::Number(get_car_index(environment.symbol_table) as u64);
-    environment.heap[get_car_index(index)] = object;
-    environment.symbol_table = get_cdr(environment, environment.symbol_table);
+fn set_global(vm: &mut Vm, object: Object) {
+    let index = Object::Number(get_car_index(vm.symbol_table) as u64);
+    vm.heap[get_car_index(index)] = object;
+    vm.symbol_table = get_cdr(vm, vm.symbol_table);
 }
 
-fn decode(environment: &mut Environment) {
+fn decode(vm: &mut Vm) {
     let weights = [20, 30, 0, 10, 11, 4];
 
     #[allow(unused_assignments)]
@@ -310,7 +304,7 @@ fn decode(environment: &mut Environment) {
     let mut op: i64 = -1;
 
     loop {
-        let x = get_code(environment);
+        let x = get_code(vm);
         n = tag_number(x);
         op = -1;
 
@@ -324,35 +318,35 @@ fn decode(environment: &mut Environment) {
 
         if x > 90 {
             op = INSTRUCTION_IF as i64;
-            n = environment.pop();
+            n = vm.pop();
         } else {
             if op == 0 {
-                environment.push(NUMBER_0, NUMBER_0);
+                vm.push(NUMBER_0, NUMBER_0);
             }
 
             if unwrap_object(&n) >= d {
                 n = if unwrap_object(&n) == d {
-                    tag_number(get_int(environment, 0))
+                    tag_number(get_int(vm, 0))
                 } else {
                     let num = (unwrap_object(&n) - d - 1) as i64;
-                    let int = get_int(environment, num);
-                    Object::Rib(symbol_ref(environment, tag_number(int)) as u64)
+                    let int = get_int(vm, num);
+                    Object::Rib(symbol_ref(vm, tag_number(int)) as u64)
                 }
             } else {
                 n = if op < 3 {
-                    Object::Rib(symbol_ref(environment, n) as u64)
+                    Object::Rib(symbol_ref(vm, n) as u64)
                 } else {
                     n
                 }
             }
 
             if op > 4 {
-                let obj = environment.pop();
-                let rib2 = allocate_rib2(environment, n, NUMBER_0, obj);
-                let nil = get_nil(environment);
-                n = allocate_rib(environment, rib2, nil, CLOSURE_TAG);
+                let obj = vm.pop();
+                let rib2 = allocate_rib2(vm, n, NUMBER_0, obj);
+                let nil = get_nil(vm);
+                n = allocate_rib(vm, rib2, nil, CLOSURE_TAG);
 
-                if unwrap_object(&environment.stack) == unwrap_object(&NUMBER_0) {
+                if unwrap_object(&vm.stack) == unwrap_object(&NUMBER_0) {
                     break;
                 }
             } else if op > 0 {
@@ -362,125 +356,120 @@ fn decode(environment: &mut Environment) {
             }
         }
 
-        let c = allocate_rib(environment, Object::Number(op as u64), n, Object::Number(0));
-        environment.heap[get_cdr_index(c)] = environment.heap[get_tos_index(environment)];
-        environment.heap[get_tos_index(environment)] = c;
+        let c = allocate_rib(vm, Object::Number(op as u64), n, Object::Number(0));
+        vm.heap[get_cdr_index(c)] = vm.heap[get_tos_index(vm)];
+        vm.heap[get_tos_index(vm)] = c;
     }
 
-    let car = get_car(environment, n);
-    let tag = get_tag(environment, car);
+    let car = get_car(vm, n);
+    let tag = get_tag(vm, car);
 
-    environment.program_counter = get_tag(environment, tag);
+    vm.program_counter = get_tag(vm, tag);
 }
 
-fn setup_stack(environment: &mut Environment) {
-    environment.push(NUMBER_0, PAIR_TAG);
-    environment.push(NUMBER_0, PAIR_TAG);
+fn setup_stack(vm: &mut Vm) {
+    vm.push(NUMBER_0, PAIR_TAG);
+    vm.push(NUMBER_0, PAIR_TAG);
 
-    let first = get_cdr(environment, environment.stack);
-    environment.heap[get_cdr_index(environment.stack)] = NUMBER_0;
-    environment.heap[get_tag_index(environment.stack)] = first;
+    let first = get_cdr(vm, vm.stack);
+    vm.heap[get_cdr_index(vm.stack)] = NUMBER_0;
+    vm.heap[get_tag_index(vm.stack)] = first;
 
-    environment.heap[get_car_index(first)] = tag_number(INSTRUCTION_HALT as i64);
-    environment.heap[get_cdr_index(first)] = NUMBER_0;
-    environment.heap[get_tag_index(first)] = PAIR_TAG;
+    vm.heap[get_car_index(first)] = tag_number(INSTRUCTION_HALT as i64);
+    vm.heap[get_cdr_index(first)] = NUMBER_0;
+    vm.heap[get_tag_index(first)] = PAIR_TAG;
 }
 
-fn run(environment: &mut Environment) {
+fn run(vm: &mut Vm) {
     loop {
-        let instruction = get_car(environment, environment.program_counter);
+        let instruction = get_car(vm, vm.program_counter);
         println!("{}", unwrap_object(&instruction) as i64);
-        environment.advance_program_counter();
-        let instruction = get_car(environment, environment.program_counter);
+        vm.advance_program_counter();
+        let instruction = get_car(vm, vm.program_counter);
         println!("{}", unwrap_object(&instruction) as i64);
 
         match unwrap_object(&instruction) {
             INSTRUCTION_HALT => exit(None),
             INSTRUCTION_APPLY => {
-                let jump = get_tag(environment, environment.program_counter) == NUMBER_0;
+                let jump = get_tag(vm, vm.program_counter) == NUMBER_0;
 
-                if !is_rib(&code(environment)) {
-                    let code_obj = code(environment);
+                if !is_rib(&code(vm)) {
+                    let code_obj = code(vm);
 
-                    environment.operate_primitive(
+                    vm.operate_primitive(
                         Primitive::from_u64(unwrap_object(&code_obj)).expect("valid primitive"),
                     );
 
                     if jump {
-                        environment.program_counter = get_continuation(environment);
-                        environment.heap[get_cdr_index(environment.stack)] =
-                            get_car(environment, environment.program_counter);
+                        vm.program_counter = get_continuation(vm);
+                        vm.heap[get_cdr_index(vm.stack)] = get_car(vm, vm.program_counter);
                     }
 
-                    environment.advance_program_counter();
+                    vm.advance_program_counter();
                 } else {
-                    let code_object = code(environment);
-                    let argc = get_car(environment, code_object);
-                    environment.heap[get_car_index(environment.program_counter)] =
-                        code(environment);
+                    let code_object = code(vm);
+                    let argc = get_car(vm, code_object);
+                    vm.heap[get_car_index(vm.program_counter)] = code(vm);
 
-                    let proc_obj = proc(environment);
-                    let mut s2 = allocate_rib(environment, NUMBER_0, proc_obj, PAIR_TAG);
+                    let proc_obj = proc(vm);
+                    let mut s2 = allocate_rib(vm, NUMBER_0, proc_obj, PAIR_TAG);
 
                     for _ in 0..unwrap_object(&argc) {
-                        let pop_obj = environment.pop();
-                        s2 = allocate_rib(environment, pop_obj, s2, PAIR_TAG);
+                        let pop_obj = vm.pop();
+                        s2 = allocate_rib(vm, pop_obj, s2, PAIR_TAG);
                     }
 
                     let c2 =
-                        Object::Number(
-                            list_tail(environment, unwrap_object(&s2) as usize, argc) as u64
-                        );
+                        Object::Number(list_tail(vm, unwrap_object(&s2) as usize, argc) as u64);
 
                     if jump {
-                        let k = get_continuation(environment);
-                        environment.heap[get_car_index(c2)] = get_car(environment, k);
-                        environment.heap[get_tag_index(c2)] = get_tag(environment, k);
+                        let k = get_continuation(vm);
+                        vm.heap[get_car_index(c2)] = get_car(vm, k);
+                        vm.heap[get_tag_index(c2)] = get_tag(vm, k);
                     } else {
-                        environment.heap[get_car_index(c2)] = environment.stack;
-                        environment.heap[get_tag_index(c2)] =
-                            get_tag(environment, environment.program_counter);
+                        vm.heap[get_car_index(c2)] = vm.stack;
+                        vm.heap[get_tag_index(c2)] = get_tag(vm, vm.program_counter);
                     }
 
-                    environment.stack = s2;
+                    vm.stack = s2;
 
-                    let new_pc = get_car(environment, environment.program_counter);
-                    environment.heap[get_car_index(environment.program_counter)] = instruction;
-                    environment.program_counter = get_tag(environment, new_pc);
+                    let new_pc = get_car(vm, vm.program_counter);
+                    vm.heap[get_car_index(vm.program_counter)] = instruction;
+                    vm.program_counter = get_tag(vm, new_pc);
                 }
             }
             INSTRUCTION_SET => {
-                let x = environment.pop();
+                let x = vm.pop();
 
-                let rib = if !is_rib(&get_cdr(environment, environment.program_counter)) {
-                    let cdr_obj = get_cdr(environment, environment.program_counter);
-                    let stack = unwrap_object(&environment.stack) as usize;
-                    Object::Rib(list_tail(environment, stack, cdr_obj) as u64)
+                let rib = if !is_rib(&get_cdr(vm, vm.program_counter)) {
+                    let cdr_obj = get_cdr(vm, vm.program_counter);
+                    let stack = unwrap_object(&vm.stack) as usize;
+                    Object::Rib(list_tail(vm, stack, cdr_obj) as u64)
                 } else {
-                    get_cdr(environment, environment.program_counter)
+                    get_cdr(vm, vm.program_counter)
                 };
 
-                environment.heap[get_car_index(rib)] = x;
+                vm.heap[get_car_index(rib)] = x;
 
-                environment.advance_program_counter();
+                vm.advance_program_counter();
             }
             INSTRUCTION_GET => {
-                let proc_obj = proc(environment);
-                environment.push(proc_obj, PAIR_TAG);
-                environment.advance_program_counter();
+                let proc_obj = proc(vm);
+                vm.push(proc_obj, PAIR_TAG);
+                vm.advance_program_counter();
             }
             INSTRUCTION_CONSTANT => {
-                let object = get_cdr(environment, environment.program_counter);
-                environment.push(object, PAIR_TAG);
-                environment.advance_program_counter();
+                let object = get_cdr(vm, vm.program_counter);
+                vm.push(object, PAIR_TAG);
+                vm.advance_program_counter();
             }
             INSTRUCTION_IF => {
-                let p = unwrap_object(&environment.pop());
-                let false_unwrapped = unwrap_object(&environment.r#false);
+                let p = unwrap_object(&vm.pop());
+                let false_unwrapped = unwrap_object(&vm.r#false);
                 if p != false_unwrapped {
-                    environment.program_counter = get_cdr(environment, environment.program_counter);
+                    vm.program_counter = get_cdr(vm, vm.program_counter);
                 } else {
-                    environment.program_counter = get_tag(environment, environment.program_counter);
+                    vm.program_counter = get_tag(vm, vm.program_counter);
                 }
             }
             _ => exit(Some(ExitCode::IllegalInstruction)),
@@ -488,44 +477,44 @@ fn run(environment: &mut Environment) {
     }
 }
 
-fn create_symbol(environment: &mut Environment, name: Object) -> Object {
-    let len = list_length(environment, name);
-    let list = allocate_rib(environment, name, len, STRING_TAG);
-    let symbol = allocate_rib(environment, environment.r#false, list, SYMBOL_TAG);
-    allocate_rib(environment, symbol, environment.symbol_table, PAIR_TAG)
+fn create_symbol(vm: &mut Vm, name: Object) -> Object {
+    let len = list_length(vm, name);
+    let list = allocate_rib(vm, name, len, STRING_TAG);
+    let symbol = allocate_rib(vm, vm.r#false, list, SYMBOL_TAG);
+    allocate_rib(vm, symbol, vm.symbol_table, PAIR_TAG)
 }
 
-fn allocate_rib(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
-    environment.push(car, cdr);
-    let stack = get_cdr(environment, environment.stack);
-    let allocated = environment.stack;
+fn allocate_rib(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
+    vm.push(car, cdr);
+    let stack = get_cdr(vm, vm.stack);
+    let allocated = vm.stack;
 
-    environment.heap[get_cdr_index(allocated)] = environment.heap[get_tag_index(allocated)];
-    environment.heap[get_tag_index(allocated)] = tag;
+    vm.heap[get_cdr_index(allocated)] = vm.heap[get_tag_index(allocated)];
+    vm.heap[get_tag_index(allocated)] = tag;
 
-    environment.stack = stack;
+    vm.stack = stack;
 
     Object::Rib(unwrap_object(&allocated))
 }
 
-fn allocate_rib2(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
-    environment.push(car, tag);
-    let stack = get_cdr(environment, environment.stack);
-    let allocated = environment.stack;
+fn allocate_rib2(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
+    vm.push(car, tag);
+    let stack = get_cdr(vm, vm.stack);
+    let allocated = vm.stack;
 
-    environment.heap[get_cdr_index(allocated)] = cdr;
+    vm.heap[get_cdr_index(allocated)] = cdr;
 
-    environment.stack = stack;
+    vm.stack = stack;
 
     Object::Rib(unwrap_object(&allocated))
 }
 
-fn list_length(environment: &mut Environment, mut list: Object) -> Object {
+fn list_length(vm: &mut Vm, mut list: Object) -> Object {
     let mut len = 0;
 
-    while is_rib(&list) && unwrap_object(&get_tag(environment, list)) == 0 {
+    while is_rib(&list) && unwrap_object(&get_tag(vm, list)) == 0 {
         len += 1;
-        list = get_cdr(environment, list)
+        list = get_cdr(vm, list)
     }
 
     tag_number(len)
@@ -555,7 +544,7 @@ enum Primitive {
     PutC,
 }
 
-impl<'a> Environment<'a> {
+impl<'a> Vm<'a> {
     fn advance_program_counter(&mut self) {
         self.program_counter = get_tag(self, self.program_counter);
     }
