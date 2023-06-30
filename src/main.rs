@@ -239,18 +239,21 @@ impl<'a> Vm<'a> {
                         self.advance_program_counter();
                     } else {
                         let code_object = code(self);
-                        let argc = self.get_car(code_object);
+                        let argument_count = self.get_car(code_object);
                         self.heap[get_car_index(self.program_counter)] = code(self);
 
-                        let proc_obj = get_procedure(self);
-                        let mut s2 = allocate_rib(self, NUMBER_0, proc_obj, PAIR_TAG);
+                        let procedure = get_procedure(self);
+                        let mut s2 = allocate_rib(self, NUMBER_0, procedure, PAIR_TAG);
 
-                        for _ in 0..argc.to_raw() {
+                        for _ in 0..argument_count.to_raw() {
                             let pop_obj = self.pop();
                             s2 = allocate_rib(self, pop_obj, s2, PAIR_TAG);
                         }
 
-                        let c2 = Object::Number(list_tail(self, s2.to_raw() as usize, argc) as u64);
+                        let c2 =
+                            Object::Number(
+                                list_tail(self, s2.to_raw() as usize, argument_count) as u64
+                            );
 
                         if jump {
                             let k = get_continuation(self);
