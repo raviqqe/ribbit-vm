@@ -348,7 +348,7 @@ fn decode(environment: &mut Environment) {
 
             if op > 4 {
                 let obj = environment.pop();
-                let rib2 = alloc_rib2(environment, n, NUMBER_0, obj);
+                let rib2 = allocate_rib2(environment, n, NUMBER_0, obj);
                 let nil = get_nil(environment);
                 n = allocate_rib(environment, rib2, nil, CLOSURE_TAG);
 
@@ -508,14 +508,14 @@ fn allocate_rib(environment: &mut Environment, car: Object, cdr: Object, tag: Ob
     Object::Rib(unwrap_object(&allocated))
 }
 
-fn alloc_rib2(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
+fn allocate_rib2(environment: &mut Environment, car: Object, cdr: Object, tag: Object) -> Object {
     environment.push(car, tag);
-    let old_stack = get_cdr(environment, environment.stack);
+    let stack = get_cdr(environment, environment.stack);
     let allocated = environment.stack;
 
     environment.heap[get_cdr_index(allocated)] = cdr;
 
-    environment.stack = old_stack;
+    environment.stack = stack;
 
     Object::Rib(unwrap_object(&allocated))
 }
