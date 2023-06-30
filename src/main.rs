@@ -121,36 +121,6 @@ fn get_tag_index(index: Object) -> usize {
     (&index.to_raw() + 2).try_into().unwrap()
 }
 
-fn build_symbol_table(vm: &mut Vm) {
-    let mut n = vm.get_input_int(0);
-
-    while n > 0 {
-        n -= 1;
-        let nil = vm.get_nil();
-        vm.symbol_table = create_symbol(vm, nil);
-    }
-
-    let mut name = vm.get_nil();
-
-    loop {
-        let c = vm.get_input_byte();
-
-        if c == 44 {
-            vm.symbol_table = create_symbol(vm, name);
-            name = vm.get_nil();
-            continue;
-        }
-
-        if c == 59 {
-            break;
-        }
-
-        name = allocate_rib(vm, Object::Number(c as u64), name, PAIR_TAG);
-    }
-
-    vm.symbol_table = create_symbol(vm, name);
-}
-
 fn set_global(vm: &mut Vm, object: Object) {
     let index = Object::Number(get_car_index(vm.symbol_table) as u64);
     vm.heap[get_car_index(index)] = object;
@@ -551,6 +521,36 @@ impl<'a> Vm<'a> {
 
     // Decoding
 
+    fn decode_symbol_table(&mut self) {
+        let mut count = self.get_input_int(0);
+
+        while count > 0 {
+            count -= 1;
+            let nil = self.get_nil();
+            self.symbol_table = create_symbol(self, nil);
+        }
+
+        let mut name = self.get_nil();
+
+        loop {
+            let c = self.get_input_byte();
+
+            if c == 44 {
+                self.symbol_table = create_symbol(self, name);
+                name = self.get_nil();
+                continue;
+            }
+
+            if c == 59 {
+                break;
+            }
+
+            name = allocate_rib(self, Object::Number(c as u64), name, PAIR_TAG);
+        }
+
+        self.symbol_table = create_symbol(self, name);
+    }
+
     fn decode(&mut self) {
         let weights = [20, 30, 0, 10, 11, 4];
 
@@ -662,7 +662,7 @@ fn main() {
     let init_0 = allocate_rib(&mut vm, NUMBER_0, NUMBER_0, SINGLETON_TAG);
     vm.r#false = allocate_rib(&mut vm, init_0, init_0, SINGLETON_TAG);
 
-    build_symbol_table(&mut vm);
+    vm.decode_symbol_table();
     vm.decode();
 
     let symbol_table = vm.symbol_table;
