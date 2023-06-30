@@ -683,10 +683,12 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
             operate_binary(environment, Div::div);
         }
         Primitive::GetC => {
-            let mut buff: [u8; 1] = [0];
+            let mut buffer = vec![0u8; 1];
+
             // TODO Handle errors.
-            stdin().read_exact(&mut buff).unwrap();
-            let _read = buff[0];
+            stdin().read_exact(&mut buffer).unwrap();
+
+            push(environment, Object::Number(buffer[0] as u64), PAIR_TAG);
         }
         Primitive::PutC => {
             let x = pop(environment);
