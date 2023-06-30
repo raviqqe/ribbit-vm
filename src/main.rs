@@ -213,50 +213,6 @@ fn get_rib<'a>(vm: &'a mut Vm, index: Object) -> Rib<'a> {
     }
 }
 
-fn main() {
-    // @@(replace ");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y" (encode 92)
-    let input = String::from(");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y");
-    // )@@
-    let mut heap = [NUMBER_0; HEAP_SIZE];
-    let scan = &heap[0] as *const Object;
-
-    let mut vm = Vm {
-        stack: NUMBER_0,
-        program_counter: NUMBER_0,
-        r#false: NUMBER_0,
-
-        position: 0,
-        input: input.as_bytes(),
-        heap: &mut heap,
-        symbol_table: NUMBER_0,
-
-        allocation_index: HEAP_BOTTOM,
-        allocation_limit: HEAP_MIDDLE,
-        scan,
-    };
-
-    let init_0 = allocate_rib(&mut vm, NUMBER_0, NUMBER_0, SINGLETON_TAG);
-    vm.r#false = allocate_rib(&mut vm, init_0, init_0, SINGLETON_TAG);
-
-    build_symbol_table(&mut vm);
-    decode(&mut vm);
-
-    let symbol_table = vm.symbol_table;
-    let rib = allocate_rib(&mut vm, NUMBER_0, symbol_table, CLOSURE_TAG);
-    let r#false = vm.r#false;
-    let r#true = get_true(&mut vm);
-    let nil = get_nil(&mut vm);
-
-    set_global(&mut vm, rib);
-    set_global(&mut vm, r#false);
-    set_global(&mut vm, r#true);
-    set_global(&mut vm, nil);
-
-    setup_stack(&mut vm);
-
-    run(&mut vm);
-}
-
 fn build_symbol_table(vm: &mut Vm) {
     let mut n = get_int(vm, 0);
 
@@ -705,4 +661,48 @@ impl<'a> Vm<'a> {
 
         // TODO Finish GC
     }
+}
+
+fn main() {
+    // @@(replace ");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y" (encode 92)
+    let input = String::from(");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y");
+    // )@@
+    let mut heap = [NUMBER_0; HEAP_SIZE];
+    let scan = &heap[0] as *const Object;
+
+    let mut vm = Vm {
+        stack: NUMBER_0,
+        program_counter: NUMBER_0,
+        r#false: NUMBER_0,
+
+        position: 0,
+        input: input.as_bytes(),
+        heap: &mut heap,
+        symbol_table: NUMBER_0,
+
+        allocation_index: HEAP_BOTTOM,
+        allocation_limit: HEAP_MIDDLE,
+        scan,
+    };
+
+    let init_0 = allocate_rib(&mut vm, NUMBER_0, NUMBER_0, SINGLETON_TAG);
+    vm.r#false = allocate_rib(&mut vm, init_0, init_0, SINGLETON_TAG);
+
+    build_symbol_table(&mut vm);
+    decode(&mut vm);
+
+    let symbol_table = vm.symbol_table;
+    let rib = allocate_rib(&mut vm, NUMBER_0, symbol_table, CLOSURE_TAG);
+    let r#false = vm.r#false;
+    let r#true = get_true(&mut vm);
+    let nil = get_nil(&mut vm);
+
+    set_global(&mut vm, rib);
+    set_global(&mut vm, r#false);
+    set_global(&mut vm, r#true);
+    set_global(&mut vm, nil);
+
+    setup_stack(&mut vm);
+
+    run(&mut vm);
 }
