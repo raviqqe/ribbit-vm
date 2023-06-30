@@ -20,12 +20,12 @@ const HEAP_MIDDLE: usize = HEAP_SIZE / 2;
 #[allow(dead_code)]
 const HEAP_TOP: usize = HEAP_SIZE;
 
-const NUMBER_0: Object = tag_number(0);
-const PAIR_TAG: Object = tag_number(0);
-const CLOSURE_TAG: Object = tag_number(1);
-const SYMBOL_TAG: Object = tag_number(2);
-const STRING_TAG: Object = tag_number(3);
-const SINGLETON_TAG: Object = tag_number(5);
+const NUMBER_0: Object = Object::Number(0);
+const PAIR_TAG: Object = Object::Number(0);
+const CLOSURE_TAG: Object = Object::Number(1);
+const SYMBOL_TAG: Object = Object::Number(2);
+const STRING_TAG: Object = Object::Number(3);
+const SINGLETON_TAG: Object = Object::Number(5);
 
 const INSTRUCTION_APPLY: u64 = 0;
 const INSTRUCTION_SET: u64 = 1;
@@ -41,14 +41,6 @@ enum ExitCode {
 
 fn exit(code: Option<ExitCode>) -> ! {
     process::exit(code.map(|code| code as i32).unwrap_or(0))
-}
-
-const fn tag_number(number: i64) -> Object {
-    Object::Number(number as u64)
-}
-
-const fn tag_rib(number: u64) -> Object {
-    Object::Rib(number)
 }
 
 const fn unwrap_object(object: &Object) -> u64 {
@@ -191,7 +183,7 @@ fn build_symbol_table(vm: &mut Vm) {
             break;
         }
 
-        name = allocate_rib(vm, tag_number(c as i64), name, PAIR_TAG);
+        name = allocate_rib(vm, Object::Number(c as u64), name, PAIR_TAG);
     }
 
     vm.symbol_table = create_symbol(vm, name);
@@ -215,7 +207,7 @@ fn decode(vm: &mut Vm) {
 
     loop {
         let x = get_code(vm);
-        n = tag_number(x);
+        n = Object::Number(x as u64);
         op = -1;
 
         while unwrap_object(&n) > {
@@ -236,11 +228,10 @@ fn decode(vm: &mut Vm) {
 
             if unwrap_object(&n) >= d {
                 n = if unwrap_object(&n) == d {
-                    tag_number(get_int(vm, 0))
+                    Object::Number(get_int(vm, 0) as u64)
                 } else {
-                    let num = (unwrap_object(&n) - d - 1) as i64;
-                    let int = get_int(vm, num);
-                    Object::Rib(symbol_ref(vm, tag_number(int)) as u64)
+                    let int = get_int(vm, (unwrap_object(&n) - d - 1) as i64);
+                    Object::Rib(symbol_ref(vm, Object::Number(int as u64)) as u64)
                 }
             } else {
                 n = if op < 3 {
@@ -285,7 +276,7 @@ fn setup_stack(vm: &mut Vm) {
     vm.heap[get_cdr_index(vm.stack)] = NUMBER_0;
     vm.heap[get_tag_index(vm.stack)] = first;
 
-    vm.heap[get_car_index(first)] = tag_number(INSTRUCTION_HALT as i64);
+    vm.heap[get_car_index(first)] = Object::Number(INSTRUCTION_HALT);
     vm.heap[get_cdr_index(first)] = NUMBER_0;
     vm.heap[get_tag_index(first)] = PAIR_TAG;
 }
@@ -330,7 +321,7 @@ fn list_length(vm: &mut Vm, mut list: Object) -> Object {
         list = vm.get_cdr(list)
     }
 
-    tag_number(len)
+    Object::Number(len)
 }
 
 #[derive(Clone, Copy, FromPrimitive)]
@@ -494,7 +485,7 @@ impl<'a> Vm<'a> {
         self.heap[self.allocation_index] = tag;
         self.allocation_index += 1;
 
-        self.stack = tag_rib((self.allocation_index - rib::FIELD_COUNT) as u64);
+        self.stack = Object::Rib((self.allocation_index - rib::FIELD_COUNT) as u64);
 
         if self.allocation_index == self.allocation_limit {
             // TODO Run GC.
