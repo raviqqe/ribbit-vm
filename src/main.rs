@@ -328,7 +328,7 @@ impl<'a> Vm<'a> {
         self.stack = Object::Rib((self.allocation_index - rib::FIELD_COUNT) as u64);
 
         if self.allocation_index == self.allocation_limit {
-            // TODO Run GC.
+            self.collect_garbages();
         }
     }
 
@@ -514,7 +514,7 @@ impl<'a> Vm<'a> {
         self.allocation_limit = to_space + SPACE_SIZE;
         self.allocation_index = to_space;
 
-        // TODO Finish GC
+        todo!()
     }
 
     // Decoding
