@@ -77,13 +77,13 @@ struct Vm<'a> {
     position: usize,
     input: &'a [u8],
 
-    heap: &'a mut [Object; HEAP_SIZE],
+    heap: [Object; HEAP_SIZE],
     symbol_table: Object,
 
     allocation_index: usize,
     allocation_limit: usize,
     #[allow(dead_code)]
-    scan: *const Object,
+    scan: usize,
 }
 
 fn list_tail(vm: &mut Vm, list: usize, index: Object) -> usize {
@@ -501,6 +501,23 @@ enum Primitive {
 }
 
 impl<'a> Vm<'a> {
+    pub fn new(input: &'a [u8]) -> Self {
+        Self {
+            stack: NUMBER_0,
+            program_counter: NUMBER_0,
+            r#false: NUMBER_0,
+
+            position: 0,
+            input,
+            heap: [NUMBER_0; HEAP_SIZE],
+            symbol_table: NUMBER_0,
+
+            allocation_index: HEAP_BOTTOM,
+            allocation_limit: HEAP_MIDDLE,
+            scan: 0,
+        }
+    }
+
     fn advance_program_counter(&mut self) {
         self.program_counter = get_tag(self, self.program_counter);
     }
@@ -668,23 +685,7 @@ const INPUT: &[u8] = b");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y";
 // )@@
 
 fn main() {
-    let mut heap = [NUMBER_0; HEAP_SIZE];
-    let scan = &heap[0] as *const Object;
-
-    let mut vm = Vm {
-        stack: NUMBER_0,
-        program_counter: NUMBER_0,
-        r#false: NUMBER_0,
-
-        position: 0,
-        input: INPUT,
-        heap: &mut heap,
-        symbol_table: NUMBER_0,
-
-        allocation_index: HEAP_BOTTOM,
-        allocation_limit: HEAP_MIDDLE,
-        scan,
-    };
+    let mut vm = Vm::new(INPUT);
 
     let init_0 = allocate_rib(&mut vm, NUMBER_0, NUMBER_0, SINGLETON_TAG);
     vm.r#false = allocate_rib(&mut vm, init_0, init_0, SINGLETON_TAG);
