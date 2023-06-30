@@ -405,8 +405,7 @@ fn run(environment: &mut Environment) {
                 if !is_rib(&code(environment)) {
                     let code_obj = code(environment);
 
-                    primitive(
-                        environment,
+                    environment.operate_primitive(
                         Primitive::from_u64(unwrap_object(&code_obj)).expect("valid primitive"),
                     );
 
@@ -596,123 +595,125 @@ enum Primitive {
     PutC,
 }
 
-fn primitive(environment: &mut Environment, primitive: Primitive) {
-    match primitive {
-        Primitive::Rib => {
-            let rib = allocate_rib(environment, NUMBER_0, NUMBER_0, NUMBER_0);
-            environment.heap[get_car_index(rib)] = pop(environment);
-            environment.heap[get_cdr_index(rib)] = pop(environment);
-            environment.heap[get_tag_index(rib)] = pop(environment);
-            push(environment, rib, PAIR_TAG);
-        }
-        Primitive::Id => {
-            let x = pop(environment);
-            push(environment, x, PAIR_TAG);
-        }
-        Primitive::Pop => {
-            pop(environment);
-            // TODO Check what is the meaning of true?
-        }
-        Primitive::Skip => {
-            let x = pop(environment);
-            pop(environment);
-            push(environment, x, PAIR_TAG);
-        }
-        Primitive::Close => {
-            let mut tos_index = get_tos_index(environment);
-            let x = get_car(environment, Object::Number(tos_index as u64));
-            let y = get_cdr(environment, environment.stack);
-            tos_index = get_tos_index(environment);
-            environment.heap[tos_index] = allocate_rib(environment, x, y, CLOSURE_TAG);
-        }
-        Primitive::IsRib => {
-            let x = pop(environment);
-            let cond = is_rib(&x);
-            let boolean = get_boolean(environment, cond);
-            push(environment, boolean, PAIR_TAG);
-        }
-        Primitive::Field0 => {
-            let x = pop(environment);
-            let car = get_car(environment, x);
-            push(environment, car, PAIR_TAG);
-        }
-        Primitive::Field1 => {
-            let x = pop(environment);
-            let cdr = get_cdr(environment, x);
-            push(environment, cdr, PAIR_TAG);
-        }
-        Primitive::Field2 => {
-            let x = pop(environment);
-            let tag = get_tag(environment, x);
-            push(environment, tag, PAIR_TAG)
-        }
-        Primitive::SetField0 => {
-            let x = pop(environment);
-            let y = pop(environment);
-            environment.heap[get_car_index(x)] = y;
-            push(environment, y, PAIR_TAG);
-        }
-        Primitive::SetField1 => {
-            let x = pop(environment);
-            let y = pop(environment);
-            environment.heap[get_cdr_index(x)] = y;
-            push(environment, y, PAIR_TAG);
-        }
-        Primitive::SetField2 => {
-            let x = pop(environment);
-            let y = pop(environment);
-            environment.heap[get_tag_index(x)] = y;
-            push(environment, y, PAIR_TAG);
-        }
-        Primitive::Equal => {
-            operate_comparison(environment, |x, y| x == y);
-        }
-        Primitive::LessThan => {
-            operate_comparison(environment, |x, y| x < y);
-        }
-        Primitive::Add => {
-            operate_binary(environment, Add::add);
-        }
-        Primitive::Subtract => {
-            operate_binary(environment, Sub::sub);
-        }
-        Primitive::Multiply => {
-            operate_binary(environment, Mul::mul);
-        }
-        Primitive::Divide => {
-            operate_binary(environment, Div::div);
-        }
-        Primitive::GetC => {
-            let mut buffer = vec![0u8; 1];
+impl<'a> Environment<'a> {
+    fn operate_primitive(&mut self, primitive: Primitive) {
+        match primitive {
+            Primitive::Rib => {
+                let rib = allocate_rib(self, NUMBER_0, NUMBER_0, NUMBER_0);
+                self.heap[get_car_index(rib)] = pop(self);
+                self.heap[get_cdr_index(rib)] = pop(self);
+                self.heap[get_tag_index(rib)] = pop(self);
+                push(self, rib, PAIR_TAG);
+            }
+            Primitive::Id => {
+                let x = pop(self);
+                push(self, x, PAIR_TAG);
+            }
+            Primitive::Pop => {
+                pop(self);
+                // TODO Check what is the meaning of true?
+            }
+            Primitive::Skip => {
+                let x = pop(self);
+                pop(self);
+                push(self, x, PAIR_TAG);
+            }
+            Primitive::Close => {
+                let mut tos_index = get_tos_index(self);
+                let x = get_car(self, Object::Number(tos_index as u64));
+                let y = get_cdr(self, self.stack);
+                tos_index = get_tos_index(self);
+                self.heap[tos_index] = allocate_rib(self, x, y, CLOSURE_TAG);
+            }
+            Primitive::IsRib => {
+                let x = pop(self);
+                let cond = is_rib(&x);
+                let boolean = get_boolean(self, cond);
+                push(self, boolean, PAIR_TAG);
+            }
+            Primitive::Field0 => {
+                let x = pop(self);
+                let car = get_car(self, x);
+                push(self, car, PAIR_TAG);
+            }
+            Primitive::Field1 => {
+                let x = pop(self);
+                let cdr = get_cdr(self, x);
+                push(self, cdr, PAIR_TAG);
+            }
+            Primitive::Field2 => {
+                let x = pop(self);
+                let tag = get_tag(self, x);
+                push(self, tag, PAIR_TAG)
+            }
+            Primitive::SetField0 => {
+                let x = pop(self);
+                let y = pop(self);
+                self.heap[get_car_index(x)] = y;
+                push(self, y, PAIR_TAG);
+            }
+            Primitive::SetField1 => {
+                let x = pop(self);
+                let y = pop(self);
+                self.heap[get_cdr_index(x)] = y;
+                push(self, y, PAIR_TAG);
+            }
+            Primitive::SetField2 => {
+                let x = pop(self);
+                let y = pop(self);
+                self.heap[get_tag_index(x)] = y;
+                push(self, y, PAIR_TAG);
+            }
+            Primitive::Equal => {
+                self.operate_comparison(|x, y| x == y);
+            }
+            Primitive::LessThan => {
+                self.operate_comparison(|x, y| x < y);
+            }
+            Primitive::Add => {
+                self.operate_binary(Add::add);
+            }
+            Primitive::Subtract => {
+                self.operate_binary(Sub::sub);
+            }
+            Primitive::Multiply => {
+                self.operate_binary(Mul::mul);
+            }
+            Primitive::Divide => {
+                self.operate_binary(Div::div);
+            }
+            Primitive::GetC => {
+                let mut buffer = vec![0u8; 1];
 
-            // TODO Handle errors.
-            stdin().read_exact(&mut buffer).unwrap();
+                // TODO Handle errors.
+                stdin().read_exact(&mut buffer).unwrap();
 
-            push(environment, Object::Number(buffer[0] as u64), PAIR_TAG);
-        }
-        Primitive::PutC => {
-            let x = pop(environment);
+                push(self, Object::Number(buffer[0] as u64), PAIR_TAG);
+            }
+            Primitive::PutC => {
+                let x = pop(self);
 
-            print!("{}", unwrap_object(&x) as u8 as char);
+                print!("{}", unwrap_object(&x) as u8 as char);
+            }
         }
     }
-}
 
-fn operate_binary(environment: &mut Environment, operate: fn(u64, u64) -> u64) {
-    let x = pop(environment);
-    let y = pop(environment);
+    fn operate_binary(&mut self, operate: fn(u64, u64) -> u64) {
+        let x = pop(self);
+        let y = pop(self);
 
-    push(
-        environment,
-        Object::Number(operate(unwrap_object(&x), unwrap_object(&y))),
-        PAIR_TAG,
-    );
-}
+        push(
+            self,
+            Object::Number(operate(unwrap_object(&x), unwrap_object(&y))),
+            PAIR_TAG,
+        );
+    }
 
-fn operate_comparison(environment: &mut Environment, operate: fn(u64, u64) -> bool) {
-    let x = pop(environment);
-    let y = pop(environment);
-    let condition = get_boolean(environment, operate(unwrap_object(&x), unwrap_object(&y)));
+    fn operate_comparison(&mut self, operate: fn(u64, u64) -> bool) {
+        let x = pop(self);
+        let y = pop(self);
+        let condition = get_boolean(self, operate(unwrap_object(&x), unwrap_object(&y)));
 
-    push(environment, condition, PAIR_TAG);
+        push(self, condition, PAIR_TAG);
+    }
 }
