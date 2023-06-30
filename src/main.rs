@@ -77,7 +77,7 @@ fn symbol_ref(vm: &mut Vm, n: Object) -> usize {
 }
 
 fn get_operand(vm: &mut Vm, object: Object) -> Object {
-    let rib = if !&object.is_rib() {
+    let rib = if !object.is_rib() {
         Object::Rib(list_tail(vm, vm.stack.to_raw() as usize, object) as u64)
     } else {
         object
@@ -92,8 +92,8 @@ fn get_procedure(vm: &mut Vm) -> Object {
 }
 
 fn code(vm: &mut Vm) -> Object {
-    let proc_obj = get_procedure(vm);
-    vm.get_car(proc_obj)
+    let procedure = get_procedure(vm);
+    vm.get_car(procedure)
 }
 
 fn get_continuation(vm: &mut Vm) -> Object {
@@ -155,79 +155,6 @@ fn set_global(vm: &mut Vm, object: Object) {
     let index = Object::Number(get_car_index(vm.symbol_table) as u64);
     vm.heap[get_car_index(index)] = object;
     vm.symbol_table = vm.get_cdr(vm.symbol_table);
-}
-
-fn decode(vm: &mut Vm) {
-    let weights = [20, 30, 0, 10, 11, 4];
-
-    #[allow(unused_assignments)]
-    let mut n = Object::Number(0);
-    #[allow(unused_assignments)]
-    let mut d = 0;
-    #[allow(unused_assignments)]
-    let mut op: i64 = -1;
-
-    loop {
-        let x = vm.get_input_code();
-        n = Object::Number(x as u64);
-        op = -1;
-
-        while n.to_raw() > {
-            op += 1;
-            d = weights[op as usize];
-            d + 2
-        } {
-            n = Object::Number(&n.to_raw() - (d + 3));
-        }
-
-        if x > 90 {
-            op = INSTRUCTION_IF as i64;
-            n = vm.pop();
-        } else {
-            if op == 0 {
-                vm.push(NUMBER_0, NUMBER_0);
-            }
-
-            if n.to_raw() >= d {
-                n = if n.to_raw() == d {
-                    Object::Number(vm.get_input_int(0) as u64)
-                } else {
-                    let int = vm.get_input_int((&n.to_raw() - d - 1) as i64);
-                    Object::Rib(symbol_ref(vm, Object::Number(int as u64)) as u64)
-                }
-            } else {
-                n = if op < 3 {
-                    Object::Rib(symbol_ref(vm, n) as u64)
-                } else {
-                    n
-                }
-            }
-
-            if op > 4 {
-                let obj = vm.pop();
-                let rib2 = allocate_rib2(vm, n, NUMBER_0, obj);
-                let nil = vm.get_nil();
-                n = allocate_rib(vm, rib2, nil, CLOSURE_TAG);
-
-                if &vm.stack.to_raw() == &NUMBER_0.to_raw() {
-                    break;
-                }
-            } else if op > 0 {
-                op -= 1;
-            } else {
-                op = 0;
-            }
-        }
-
-        let c = allocate_rib(vm, Object::Number(op as u64), n, Object::Number(0));
-        vm.heap[get_cdr_index(c)] = vm.heap[vm.get_tos_index()];
-        vm.heap[vm.get_tos_index()] = c;
-    }
-
-    let car = vm.get_car(n);
-    let tag = vm.get_tag(car);
-
-    vm.program_counter = vm.get_tag(tag);
 }
 
 fn setup_stack(vm: &mut Vm) {
@@ -624,6 +551,79 @@ impl<'a> Vm<'a> {
 
     // Decoding
 
+    fn decode(&mut self) {
+        let weights = [20, 30, 0, 10, 11, 4];
+
+        #[allow(unused_assignments)]
+        let mut n = Object::Number(0);
+        #[allow(unused_assignments)]
+        let mut d = 0;
+        #[allow(unused_assignments)]
+        let mut op: i64 = -1;
+
+        loop {
+            let x = self.get_input_code();
+            n = Object::Number(x as u64);
+            op = -1;
+
+            while n.to_raw() > {
+                op += 1;
+                d = weights[op as usize];
+                d + 2
+            } {
+                n = Object::Number(&n.to_raw() - (d + 3));
+            }
+
+            if x > 90 {
+                op = INSTRUCTION_IF as i64;
+                n = self.pop();
+            } else {
+                if op == 0 {
+                    self.push(NUMBER_0, NUMBER_0);
+                }
+
+                if n.to_raw() >= d {
+                    n = if n.to_raw() == d {
+                        Object::Number(self.get_input_int(0) as u64)
+                    } else {
+                        let int = self.get_input_int((n.to_raw() - d - 1) as i64);
+                        Object::Rib(symbol_ref(self, Object::Number(int as u64)) as u64)
+                    }
+                } else {
+                    n = if op < 3 {
+                        Object::Rib(symbol_ref(self, n) as u64)
+                    } else {
+                        n
+                    }
+                }
+
+                if op > 4 {
+                    let obj = self.pop();
+                    let rib2 = allocate_rib2(self, n, NUMBER_0, obj);
+                    let nil = self.get_nil();
+                    n = allocate_rib(self, rib2, nil, CLOSURE_TAG);
+
+                    if &self.stack.to_raw() == &NUMBER_0.to_raw() {
+                        break;
+                    }
+                } else if op > 0 {
+                    op -= 1;
+                } else {
+                    op = 0;
+                }
+            }
+
+            let c = allocate_rib(self, Object::Number(op as u64), n, Object::Number(0));
+            self.heap[get_cdr_index(c)] = self.heap[self.get_tos_index()];
+            self.heap[self.get_tos_index()] = c;
+        }
+
+        let car = self.get_car(n);
+        let tag = self.get_tag(car);
+
+        self.program_counter = self.get_tag(tag);
+    }
+
     fn get_input_byte(&mut self) -> u8 {
         let byte = self.input[self.position];
         self.position += 1;
@@ -663,7 +663,7 @@ fn main() {
     vm.r#false = allocate_rib(&mut vm, init_0, init_0, SINGLETON_TAG);
 
     build_symbol_table(&mut vm);
-    decode(&mut vm);
+    vm.decode();
 
     let symbol_table = vm.symbol_table;
     let rib = allocate_rib(&mut vm, NUMBER_0, symbol_table, CLOSURE_TAG);
