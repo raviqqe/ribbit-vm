@@ -77,7 +77,7 @@ fn symbol_ref(vm: &mut Vm, n: Object) -> usize {
 }
 
 fn get_operand(vm: &mut Vm, object: Object) -> Object {
-    let rib = if !is_rib(&object) {
+    let rib = if !&object.is_rib() {
         Object::Rib(list_tail(vm, vm.stack.to_raw() as usize, object) as u64)
     } else {
         object
@@ -99,7 +99,7 @@ fn code(vm: &mut Vm) -> Object {
 fn get_continuation(vm: &mut Vm) -> Object {
     let mut stack = vm.stack;
 
-    while &vm.get_tag(stack).to_raw() != 0 {
+    while vm.get_tag(stack).to_raw() != 0 {
         stack = vm.get_cdr(stack);
     }
 
@@ -135,7 +135,7 @@ fn get_byte(vm: &mut Vm) -> u8 {
 
 fn get_car_index(index: Object) -> usize {
     // TODO Check this conversion
-    &index.to_raw().try_into().unwrap()
+    index.to_raw().try_into().unwrap()
 }
 
 fn get_cdr_index(index: Object) -> usize {
@@ -199,7 +199,7 @@ fn decode(vm: &mut Vm) {
         n = Object::Number(x as u64);
         op = -1;
 
-        while &n.to_raw() > {
+        while n.to_raw() > {
             op += 1;
             d = weights[op as usize];
             d + 2
@@ -215,8 +215,8 @@ fn decode(vm: &mut Vm) {
                 vm.push(NUMBER_0, NUMBER_0);
             }
 
-            if &n.to_raw() >= d {
-                n = if &n.to_raw() == d {
+            if n.to_raw() >= d {
+                n = if n.to_raw() == d {
                     Object::Number(get_int(vm, 0) as u64)
                 } else {
                     let int = get_int(vm, (&n.to_raw() - d - 1) as i64);
@@ -305,7 +305,7 @@ fn allocate_rib2(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
 fn list_length(vm: &mut Vm, mut list: Object) -> Object {
     let mut len = 0;
 
-    while is_rib(&list) && vm.get_tag(list.to_raw()) == 0 {
+    while list.is_rib() && vm.get_tag(list).to_raw() == 0 {
         len += 1;
         list = vm.get_cdr(list)
     }
@@ -368,7 +368,7 @@ impl<'a> Vm<'a> {
                 INSTRUCTION_APPLY => {
                     let jump = self.get_tag(self.program_counter) == NUMBER_0;
 
-                    if !is_rib(&code(self)) {
+                    if !code(self).is_rib() {
                         let code_obj = code(self);
 
                         self.operate_primitive(
@@ -395,9 +395,7 @@ impl<'a> Vm<'a> {
                             s2 = allocate_rib(self, pop_obj, s2, PAIR_TAG);
                         }
 
-                        let c2 = Object::Number(
-                            list_tail(self, s2.to_raw() as usize, argc) as u64
-                        );
+                        let c2 = Object::Number(list_tail(self, s2.to_raw() as usize, argc) as u64);
 
                         if jump {
                             let k = get_continuation(self);
@@ -418,7 +416,7 @@ impl<'a> Vm<'a> {
                 INSTRUCTION_SET => {
                     let x = self.pop();
 
-                    let rib = if !is_rib(&self.get_cdr(self.program_counter)) {
+                    let rib = if !self.get_cdr(self.program_counter).is_rib() {
                         let cdr_obj = self.get_cdr(self.program_counter);
                         let stack = self.stack.to_raw() as usize;
                         Object::Rib(list_tail(self, stack, cdr_obj) as u64)
@@ -441,13 +439,11 @@ impl<'a> Vm<'a> {
                     self.advance_program_counter();
                 }
                 INSTRUCTION_IF => {
-                    let p = unwrap_object(&self.pop());
-                    let false_unwrapped = unwrap_object(&self.r#false);
-                    if p != false_unwrapped {
-                        self.program_counter = self.get_cdr(self.program_counter);
+                    self.program_counter = if self.pop().to_raw() != self.r#false.to_raw() {
+                        self.get_cdr(self.program_counter)
                     } else {
-                        self.program_counter = self.get_tag(self.program_counter);
-                    }
+                        self.get_tag(self.program_counter)
+                    };
                 }
                 _ => exit(Some(ExitCode::IllegalInstruction)),
             }
@@ -485,7 +481,7 @@ impl<'a> Vm<'a> {
         get_car_index(self.stack)
     }
 
-    fn get_rib(&mut self, index: Object) -> Rib<'_> {
+    fn get_rib(&self, index: Object) -> Rib<'_> {
         let index = index.to_raw() as usize;
 
         Rib::new(
@@ -495,19 +491,19 @@ impl<'a> Vm<'a> {
         )
     }
 
-    fn get_car(&mut self, index: Object) -> Object {
+    fn get_car(&self, index: Object) -> Object {
         self.get_rib(index).car()
     }
 
-    fn get_cdr(&mut self, index: Object) -> Object {
+    fn get_cdr(&self, index: Object) -> Object {
         self.get_rib(index).cdr()
     }
 
-    fn get_tag(&mut self, index: Object) -> Object {
+    fn get_tag(&self, index: Object) -> Object {
         self.get_rib(index).tag()
     }
 
-    fn get_true(&mut self) -> Object {
+    fn get_true(&self) -> Object {
         self.get_car(self.r#false)
     }
 
@@ -553,9 +549,8 @@ impl<'a> Vm<'a> {
             }
             Primitive::IsRib => {
                 let x = self.pop();
-                let condition = is_rib(&x);
-                let boolean = self.get_boolean(condition);
-                self.push(boolean, PAIR_TAG);
+                let condition = self.get_boolean(x.is_rib());
+                self.push(condition, PAIR_TAG);
             }
             Primitive::Field0 => {
                 let x = self.pop();

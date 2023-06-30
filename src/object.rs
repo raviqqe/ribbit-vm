@@ -12,7 +12,7 @@ impl Object {
         }
     }
 
-    pub const fn is_rib(object: &Object) -> bool {
-        matches!(object, Object::Rib(_))
+    pub const fn is_rib(&self) -> bool {
+        matches!(self, Object::Rib(_))
     }
 }
