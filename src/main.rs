@@ -1,7 +1,9 @@
+mod instruction;
 mod object;
 mod primitive;
 mod rib;
 
+use instruction::Instruction;
 use object::Object;
 use primitive::Primitive;
 use rib::Rib;
@@ -26,13 +28,6 @@ const CLOSURE_TAG: Object = Object::Number(1);
 const SYMBOL_TAG: Object = Object::Number(2);
 const STRING_TAG: Object = Object::Number(3);
 const SINGLETON_TAG: Object = Object::Number(5);
-
-const INSTRUCTION_APPLY: u64 = 0;
-const INSTRUCTION_SET: u64 = 1;
-const INSTRUCTION_GET: u64 = 2;
-const INSTRUCTION_CONSTANT: u64 = 3;
-const INSTRUCTION_IF: u64 = 4;
-const INSTRUCTION_HALT: u64 = 5;
 
 #[repr(i32)]
 enum ExitCode {
@@ -135,7 +130,7 @@ fn setup_stack(vm: &mut Vm) {
     vm.heap[get_cdr_index(vm.stack)] = NUMBER_0;
     vm.heap[get_tag_index(vm.stack)] = first;
 
-    vm.heap[get_car_index(first)] = Object::Number(INSTRUCTION_HALT);
+    vm.heap[get_car_index(first)] = Object::Number(Instruction::Halt as u64);
     vm.heap[get_cdr_index(first)] = NUMBER_0;
     vm.heap[get_tag_index(first)] = PAIR_TAG;
 }
@@ -224,8 +219,8 @@ impl<'a> Vm<'a> {
             println!("{}", instruction.to_raw() as i64);
 
             match instruction.to_raw() {
-                INSTRUCTION_HALT => exit(None),
-                INSTRUCTION_APPLY => {
+                Instruction::HALT => exit(None),
+                Instruction::APPLY => {
                     let jump = self.get_tag(self.program_counter) == NUMBER_0;
 
                     if !code(self).is_rib() {
@@ -273,7 +268,7 @@ impl<'a> Vm<'a> {
                         self.program_counter = self.get_tag(new_pc);
                     }
                 }
-                INSTRUCTION_SET => {
+                Instruction::SET => {
                     let x = self.pop();
 
                     let rib = if !self.get_cdr(self.program_counter).is_rib() {
@@ -288,17 +283,17 @@ impl<'a> Vm<'a> {
 
                     self.advance_program_counter();
                 }
-                INSTRUCTION_GET => {
+                Instruction::GET => {
                     let proc_obj = get_procedure(self);
                     self.push(proc_obj, PAIR_TAG);
                     self.advance_program_counter();
                 }
-                INSTRUCTION_CONSTANT => {
+                Instruction::CONSTANT => {
                     let object = self.get_cdr(self.program_counter);
                     self.push(object, PAIR_TAG);
                     self.advance_program_counter();
                 }
-                INSTRUCTION_IF => {
+                Instruction::IF => {
                     self.program_counter = if self.pop().to_raw() != self.r#false.to_raw() {
                         self.get_cdr(self.program_counter)
                     } else {
@@ -576,7 +571,7 @@ impl<'a> Vm<'a> {
             }
 
             if x > 90 {
-                op = INSTRUCTION_IF as i64;
+                op = Instruction::If as i64;
                 n = self.pop();
             } else {
                 if op == 0 {
