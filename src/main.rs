@@ -663,10 +663,11 @@ impl<'a> Vm<'a> {
     }
 }
 
+// @@(replace ");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y" (encode 92)
+const INPUT: &[u8] = b");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y";
+// )@@
+
 fn main() {
-    // @@(replace ");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y" (encode 92)
-    let input = String::from(");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y");
-    // )@@
     let mut heap = [NUMBER_0; HEAP_SIZE];
     let scan = &heap[0] as *const Object;
 
@@ -676,7 +677,7 @@ fn main() {
         r#false: NUMBER_0,
 
         position: 0,
-        input: input.as_bytes(),
+        input: INPUT,
         heap: &mut heap,
         symbol_table: NUMBER_0,
 
