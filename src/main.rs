@@ -719,8 +719,7 @@ fn primitive(environment: &mut Environment, primitive: Primitive) {
         }
         Primitive::Putc => {
             let x = pop(environment);
-            let chr = unwrap_object(&x) as u8 as char;
-            print!("{}", chr);
+            print!("{}", unwrap_object(&x) as u8 as char);
         }
     }
 }
