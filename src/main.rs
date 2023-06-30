@@ -501,6 +501,8 @@ impl<'a> Vm<'a> {
         self.push(condition, PAIR_TAG);
     }
 
+    // Garbage collection
+
     #[allow(dead_code)]
     fn collect_garbages(&mut self) {
         let to_space = if self.allocation_limit == HEAP_MIDDLE {
