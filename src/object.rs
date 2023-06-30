@@ -1,4 +1,4 @@
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, Debug, PartialEq)]
 pub enum Object {
     Number(u64),
     Rib(u64),
