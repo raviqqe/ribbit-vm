@@ -544,7 +544,7 @@ fn push(environment: &mut Environment, car: Object, tag: Object) {
     environment.stack = tag_rib((environment.allocation_index - RIB_FIELD_COUNT) as u64);
 
     if environment.allocation_index == environment.allocation_limit {
-        // TODO GC
+        // TODO Run GC.
     }
 }
 
