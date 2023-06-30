@@ -1,9 +1,9 @@
 mod object;
+mod primitive;
 mod rib;
 
-use num_derive::FromPrimitive;
-use num_traits::FromPrimitive;
 use object::Object;
+use primitive::Primitive;
 use rib::Rib;
 use std::{
     convert::TryInto,
@@ -172,33 +172,9 @@ fn allocate_rib2(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
     Object::Rib(allocated.to_raw())
 }
 
-#[derive(Clone, Copy, FromPrimitive)]
-enum Primitive {
-    Rib,
-    Id,
-    Pop,
-    Skip,
-    Close,
-    IsRib,
-    Field0,
-    Field1,
-    Field2,
-    SetField0,
-    SetField1,
-    SetField2,
-    Equal,
-    LessThan,
-    Add,
-    Subtract,
-    Multiply,
-    Divide,
-    GetC,
-    PutC,
-}
-
 impl<'a> Vm<'a> {
     pub fn new(input: &'a [u8]) -> Self {
-        Self {
+        let mut vm = Self {
             stack: NUMBER_0,
             program_counter: NUMBER_0,
             r#false: NUMBER_0,
@@ -211,7 +187,32 @@ impl<'a> Vm<'a> {
             allocation_index: HEAP_BOTTOM,
             allocation_limit: HEAP_MIDDLE,
             scan: 0,
-        }
+        };
+
+        vm.initialize();
+
+        vm
+    }
+
+    fn initialize(&mut self) {
+        let init_0 = allocate_rib(self, NUMBER_0, NUMBER_0, SINGLETON_TAG);
+        self.r#false = allocate_rib(self, init_0, init_0, SINGLETON_TAG);
+
+        self.decode_symbol_table();
+        self.decode_codes();
+
+        let symbol_table = self.symbol_table;
+        let rib = allocate_rib(self, NUMBER_0, symbol_table, CLOSURE_TAG);
+        let r#false = self.r#false;
+        let r#true = self.get_true();
+        let nil = self.get_nil();
+
+        set_global(self, rib);
+        set_global(self, r#false);
+        set_global(self, r#true);
+        set_global(self, nil);
+
+        setup_stack(self);
     }
 
     pub fn run(&mut self) {
@@ -231,7 +232,7 @@ impl<'a> Vm<'a> {
                         let code_obj = code(self);
 
                         self.operate_primitive(
-                            Primitive::from_u64(code_obj.to_raw()).expect("valid primitive"),
+                            Primitive::try_from(code_obj.to_raw()).expect("valid primitive"),
                         );
 
                         if jump {
@@ -551,7 +552,7 @@ impl<'a> Vm<'a> {
         self.symbol_table = create_symbol(self, name);
     }
 
-    fn decode(&mut self) {
+    fn decode_codes(&mut self) {
         let weights = [20, 30, 0, 10, 11, 4];
 
         #[allow(unused_assignments)]
@@ -657,26 +658,5 @@ const INPUT: &[u8] = b");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y";
 // )@@
 
 fn main() {
-    let mut vm = Vm::new(INPUT);
-
-    let init_0 = allocate_rib(&mut vm, NUMBER_0, NUMBER_0, SINGLETON_TAG);
-    vm.r#false = allocate_rib(&mut vm, init_0, init_0, SINGLETON_TAG);
-
-    vm.decode_symbol_table();
-    vm.decode();
-
-    let symbol_table = vm.symbol_table;
-    let rib = allocate_rib(&mut vm, NUMBER_0, symbol_table, CLOSURE_TAG);
-    let r#false = vm.r#false;
-    let r#true = vm.get_true();
-    let nil = vm.get_nil();
-
-    set_global(&mut vm, rib);
-    set_global(&mut vm, r#false);
-    set_global(&mut vm, r#true);
-    set_global(&mut vm, nil);
-
-    setup_stack(&mut vm);
-
-    vm.run();
+    Vm::new(INPUT).run();
 }
