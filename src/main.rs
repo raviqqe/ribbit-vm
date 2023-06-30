@@ -43,17 +43,6 @@ fn exit(code: Option<ExitCode>) -> ! {
     process::exit(code.map(|code| code as i32).unwrap_or(0))
 }
 
-const fn unwrap_object(object: &Object) -> u64 {
-    match object {
-        Object::Number(number) => *number,
-        Object::Rib(number) => *number,
-    }
-}
-
-const fn is_rib(object: &Object) -> bool {
-    matches!(object, Object::Rib(_))
-}
-
 struct Vm<'a> {
     // Roots
     stack: Object,
