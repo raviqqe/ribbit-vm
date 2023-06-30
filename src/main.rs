@@ -56,51 +56,6 @@ struct Vm<'a> {
     scan: usize,
 }
 
-fn list_tail(vm: &mut Vm, list: usize, index: Object) -> usize {
-    if index.to_raw() == 0 {
-        list
-    } else {
-        let rib = vm.get_rib(Object::Number(list as u64));
-        let cdr = rib.cdr().to_raw();
-        list_tail(vm, cdr as usize, Object::Number(&index.to_raw() - 1))
-    }
-}
-
-fn symbol_ref(vm: &mut Vm, n: Object) -> usize {
-    let sym_table_idx = vm.symbol_table.to_raw() as usize;
-    list_tail(vm, sym_table_idx, n)
-}
-
-fn get_operand(vm: &mut Vm, object: Object) -> Object {
-    let rib = if !object.is_rib() {
-        Object::Rib(list_tail(vm, vm.stack.to_raw() as usize, object) as u64)
-    } else {
-        object
-    };
-
-    vm.get_rib(rib).car()
-}
-
-fn get_procedure(vm: &mut Vm) -> Object {
-    let cdr = vm.get_cdr(vm.program_counter);
-    get_operand(vm, cdr)
-}
-
-fn code(vm: &mut Vm) -> Object {
-    let procedure = get_procedure(vm);
-    vm.get_car(procedure)
-}
-
-fn get_continuation(vm: &mut Vm) -> Object {
-    let mut stack = vm.stack;
-
-    while vm.get_tag(stack).to_raw() != 0 {
-        stack = vm.get_cdr(stack);
-    }
-
-    stack
-}
-
 fn get_car_index(index: Object) -> usize {
     // TODO Check this conversion
     index.to_raw().try_into().unwrap()
@@ -222,27 +177,26 @@ impl<'a> Vm<'a> {
                 Instruction::HALT => exit(None),
                 Instruction::APPLY => {
                     let jump = self.get_tag(self.program_counter) == NUMBER_0;
+                    let code = self.get_code();
 
-                    if !code(self).is_rib() {
-                        let code_obj = code(self);
-
+                    if !code.is_rib() {
                         self.operate_primitive(
-                            Primitive::try_from(code_obj.to_raw()).expect("valid primitive"),
+                            Primitive::try_from(code.to_raw()).expect("valid primitive"),
                         );
 
                         if jump {
-                            self.program_counter = get_continuation(self);
+                            self.program_counter = self.get_continuation();
                             self.heap[get_cdr_index(self.stack)] =
                                 self.get_car(self.program_counter);
                         }
 
                         self.advance_program_counter();
                     } else {
-                        let code_object = code(self);
+                        let code_object = self.get_code();
                         let argument_count = self.get_car(code_object);
-                        self.heap[get_car_index(self.program_counter)] = code(self);
+                        self.heap[get_car_index(self.program_counter)] = self.get_code();
 
-                        let procedure = get_procedure(self);
+                        let procedure = self.get_procedure();
                         let mut s2 = allocate_rib(self, NUMBER_0, procedure, PAIR_TAG);
 
                         for _ in 0..argument_count.to_raw() {
@@ -250,13 +204,10 @@ impl<'a> Vm<'a> {
                             s2 = allocate_rib(self, pop_obj, s2, PAIR_TAG);
                         }
 
-                        let c2 =
-                            Object::Number(
-                                list_tail(self, s2.to_raw() as usize, argument_count) as u64
-                            );
+                        let c2 = self.get_list_tail(s2, argument_count);
 
                         if jump {
-                            let k = get_continuation(self);
+                            let k = self.get_continuation();
                             self.heap[get_car_index(c2)] = self.get_car(k);
                             self.heap[get_tag_index(c2)] = self.get_tag(k);
                         } else {
@@ -276,8 +227,7 @@ impl<'a> Vm<'a> {
 
                     let rib = if !self.get_cdr(self.program_counter).is_rib() {
                         let cdr_obj = self.get_cdr(self.program_counter);
-                        let stack = self.stack.to_raw() as usize;
-                        Object::Rib(list_tail(self, stack, cdr_obj) as u64)
+                        self.get_list_tail(self.stack, cdr_obj)
                     } else {
                         self.get_cdr(self.program_counter)
                     };
@@ -287,7 +237,7 @@ impl<'a> Vm<'a> {
                     self.advance_program_counter();
                 }
                 Instruction::GET => {
-                    let proc_obj = get_procedure(self);
+                    let proc_obj = self.get_procedure();
                     self.push(proc_obj, PAIR_TAG);
                     self.advance_program_counter();
                 }
@@ -386,6 +336,46 @@ impl<'a> Vm<'a> {
         }
 
         Object::Number(len)
+    }
+
+    fn get_list_tail(&self, list: Object, index: Object) -> Object {
+        if index.to_raw() == 0 {
+            list
+        } else {
+            let rib = self.get_rib(list);
+            self.get_list_tail(rib.cdr(), Object::Number(index.to_raw() - 1))
+        }
+    }
+
+    fn get_symbol_ref(&self, index: Object) -> Object {
+        self.get_list_tail(self.symbol_table, index)
+    }
+
+    fn get_operand(&self, object: Object) -> Object {
+        self.get_rib(if object.is_rib() {
+            object
+        } else {
+            self.get_list_tail(self.stack, object)
+        })
+        .car()
+    }
+
+    fn get_procedure(&self) -> Object {
+        self.get_operand(self.get_cdr(self.program_counter))
+    }
+
+    fn get_code(&self) -> Object {
+        self.get_car(self.get_procedure())
+    }
+
+    fn get_continuation(&self) -> Object {
+        let mut stack = self.stack;
+
+        while self.get_tag(stack).to_raw() != 0 {
+            stack = self.get_cdr(stack);
+        }
+
+        stack
     }
 
     fn operate_primitive(&mut self, primitive: Primitive) {
@@ -588,14 +578,10 @@ impl<'a> Vm<'a> {
                         Object::Number(self.get_input_int(0) as u64)
                     } else {
                         let int = self.get_input_int((n.to_raw() - d - 1) as i64);
-                        Object::Rib(symbol_ref(self, Object::Number(int as u64)) as u64)
+                        self.get_symbol_ref(Object::Number(int as u64))
                     }
                 } else {
-                    n = if op < 3 {
-                        Object::Rib(symbol_ref(self, n) as u64)
-                    } else {
-                        n
-                    }
+                    n = if op < 3 { self.get_symbol_ref(n) } else { n }
                 }
 
                 if op > 4 {
@@ -653,9 +639,7 @@ impl<'a> Vm<'a> {
     }
 }
 
-// @@(replace ");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y" (encode 92)
 const INPUT: &[u8] = b");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y";
-// )@@
 
 fn main() {
     Vm::new(INPUT).run();
