@@ -12,9 +12,9 @@ use std::{
     process,
 };
 
-const MAX_OBJECT_COUNT: u32 = 1 << 14;
-const SPACE_SIZE: u32 = MAX_OBJECT_COUNT * rib::FIELD_COUNT as u32;
-const HEAP_SIZE: usize = SPACE_SIZE as usize * 2;
+const MAX_OBJECT_COUNT: usize = 1 << 14;
+const SPACE_SIZE: usize = MAX_OBJECT_COUNT * rib::FIELD_COUNT;
+const HEAP_SIZE: usize = SPACE_SIZE * 2;
 const HEAP_BOTTOM: usize = 0;
 const HEAP_MIDDLE: usize = HEAP_SIZE / 2;
 #[allow(dead_code)]
@@ -616,7 +616,7 @@ impl<'a> Vm<'a> {
             HEAP_BOTTOM
         };
 
-        self.allocation_limit = to_space + SPACE_SIZE as usize;
+        self.allocation_limit = to_space + SPACE_SIZE;
         self.allocation_index = to_space;
 
         // TODO Finish GC
