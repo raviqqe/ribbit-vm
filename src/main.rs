@@ -23,12 +23,12 @@ const SYMBOL_TAG: Object = tag_number(2);
 const STRING_TAG: Object = tag_number(3);
 const SINGLETON_TAG: Object = tag_number(5);
 
-const INSTRUCTION_APPLY: i64 = 0;
-const INSTRUCTION_SET: i64 = 1;
-const INSTRUCTION_GET: i64 = 2;
-const INSTRUCTION_CONSTANT: i64 = 3;
-const INSTRUCTION_IF: i64 = 4;
-const INSTRUCTION_HALT: i64 = 5;
+const INSTRUCTION_APPLY: u64 = 0;
+const INSTRUCTION_SET: u64 = 1;
+const INSTRUCTION_GET: u64 = 2;
+const INSTRUCTION_CONSTANT: u64 = 3;
+const INSTRUCTION_IF: u64 = 4;
+const INSTRUCTION_HALT: u64 = 5;
 
 #[repr(i32)]
 enum ExitCode {
@@ -327,7 +327,7 @@ fn decode(environment: &mut Environment) {
         }
 
         if x > 90 {
-            op = INSTRUCTION_IF;
+            op = INSTRUCTION_IF as i64;
             n = pop(environment);
         } else {
             if op == 0 {
@@ -384,7 +384,7 @@ fn setup_stack(environment: &mut Environment) {
     environment.heap[get_cdr_index(environment.stack)] = NUMBER_0;
     environment.heap[get_tag_index(environment.stack)] = first;
 
-    environment.heap[get_car_index(first)] = tag_number(INSTRUCTION_HALT);
+    environment.heap[get_car_index(first)] = tag_number(INSTRUCTION_HALT as i64);
     environment.heap[get_cdr_index(first)] = NUMBER_0;
     environment.heap[get_tag_index(first)] = PAIR_TAG;
 }
@@ -397,7 +397,7 @@ fn run(environment: &mut Environment) {
         let instruction = get_car(environment, environment.program_counter);
         println!("{}", unwrap_object(&instruction) as i64);
 
-        match unwrap_object(&instruction) as i64 {
+        match unwrap_object(&instruction) {
             INSTRUCTION_HALT => exit(None),
             INSTRUCTION_APPLY => {
                 let jump = get_tag(environment, environment.program_counter) == NUMBER_0;
@@ -486,7 +486,6 @@ fn run(environment: &mut Environment) {
                     environment.program_counter = get_tag(environment, environment.program_counter);
                 }
             }
-
             _ => exit(Some(ExitCode::IllegalInstruction)),
         }
     }
