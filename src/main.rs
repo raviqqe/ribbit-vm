@@ -14,7 +14,7 @@ const HEAP_SIZE: usize = SPACE_SIZE as usize * 2;
 const HEAP_BOTTOM: usize = 0;
 const HEAP_MIDDLE: usize = HEAP_SIZE / 2;
 #[allow(dead_code)]
-const HEAP_TOP: usize = HEAP_SIZE - 1; // Last valid index
+const HEAP_TOP: usize = HEAP_SIZE;
 
 const NUMBER_0: Object = tag_number(0);
 const PAIR_TAG: Object = tag_number(0);
