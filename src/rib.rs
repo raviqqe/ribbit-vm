@@ -16,10 +16,10 @@ impl<'a> Rib<'a> {
     }
 
     pub fn cdr(&self) -> Object {
-        self.fields[0]
+        self.fields[1]
     }
 
     pub fn tag(&self) -> Object {
-        self.fields[0]
+        self.fields[2]
     }
 }
