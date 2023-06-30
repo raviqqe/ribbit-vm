@@ -1,5 +1,10 @@
+mod object;
+mod rib;
+
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+use object::Object;
+use rib::Rib;
 use std::{
     convert::TryInto,
     io::{stdin, Read},
@@ -7,9 +12,8 @@ use std::{
     process,
 };
 
-const RIB_FIELD_COUNT: usize = 3;
 const MAX_OBJECT_COUNT: u32 = 30_000;
-const SPACE_SIZE: u32 = MAX_OBJECT_COUNT * RIB_FIELD_COUNT as u32;
+const SPACE_SIZE: u32 = MAX_OBJECT_COUNT * rib::FIELD_COUNT as u32;
 const HEAP_SIZE: usize = SPACE_SIZE as usize * 2;
 const HEAP_BOTTOM: usize = 0;
 const HEAP_MIDDLE: usize = HEAP_SIZE / 2;
@@ -47,12 +51,6 @@ const fn tag_rib(number: u64) -> Object {
     Object::Rib(number)
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
-enum Object {
-    Number(u64),
-    Rib(u64),
-}
-
 const fn unwrap_object(object: &Object) -> u64 {
     match object {
         Object::Number(number) => *number,
@@ -62,10 +60,6 @@ const fn unwrap_object(object: &Object) -> u64 {
 
 const fn is_rib(object: &Object) -> bool {
     matches!(object, Object::Rib(_))
-}
-
-struct Rib<'a> {
-    fields: &'a [Object; RIB_FIELD_COUNT],
 }
 
 struct Vm<'a> {
@@ -90,8 +84,8 @@ fn list_tail(vm: &mut Vm, list: usize, index: Object) -> usize {
     if unwrap_object(&index) == 0 {
         list
     } else {
-        let rib = get_rib(vm, Object::Number(list as u64));
-        let cdr = unwrap_object(&rib.fields[1]);
+        let rib = vm.get_rib(Object::Number(list as u64));
+        let cdr = unwrap_object(&rib.cdr());
         list_tail(vm, cdr as usize, Object::Number(unwrap_object(&index) - 1))
     }
 }
@@ -108,24 +102,24 @@ fn get_operand(vm: &mut Vm, object: Object) -> Object {
         object
     };
 
-    get_rib(vm, rib).fields[0]
+    vm.get_rib(rib).car()
 }
 
 fn proc(vm: &mut Vm) -> Object {
-    let cdr = get_cdr(vm, vm.program_counter);
+    let cdr = vm.get_cdr(vm.program_counter);
     get_operand(vm, cdr)
 }
 
 fn code(vm: &mut Vm) -> Object {
     let proc_obj = proc(vm);
-    get_car(vm, proc_obj)
+    vm.get_car(proc_obj)
 }
 
 fn get_continuation(vm: &mut Vm) -> Object {
     let mut stack = vm.stack;
 
-    while unwrap_object(&get_tag(vm, stack)) != 0 {
-        stack = get_cdr(vm, stack);
+    while unwrap_object(&vm.get_tag(stack)) != 0 {
+        stack = vm.get_cdr(stack);
     }
 
     stack
@@ -173,63 +167,23 @@ fn get_tag_index(index: Object) -> usize {
     (unwrap_object(&index) + 2).try_into().unwrap()
 }
 
-fn get_tos_index(vm: &mut Vm) -> usize {
-    get_car_index(vm.stack)
-}
-
-fn get_car(vm: &mut Vm, index: Object) -> Object {
-    get_rib(vm, index).fields[0]
-}
-
-fn get_cdr(vm: &mut Vm, index: Object) -> Object {
-    get_rib(vm, index).fields[1]
-}
-
-fn get_tag(vm: &mut Vm, index: Object) -> Object {
-    get_rib(vm, index).fields[2]
-}
-
-fn get_true(vm: &mut Vm) -> Object {
-    get_car(vm, vm.r#false)
-}
-
-fn get_nil(vm: &mut Vm) -> Object {
-    get_cdr(vm, vm.r#false)
-}
-
-fn get_boolean(vm: &mut Vm, value: bool) -> Object {
-    if value {
-        get_true(vm)
-    } else {
-        vm.r#false
-    }
-}
-
-fn get_rib<'a>(vm: &'a mut Vm, index: Object) -> Rib<'a> {
-    let index = unwrap_object(&index) as usize;
-
-    Rib {
-        fields: vm.heap[index..index + RIB_FIELD_COUNT].try_into().unwrap(),
-    }
-}
-
 fn build_symbol_table(vm: &mut Vm) {
     let mut n = get_int(vm, 0);
 
     while n > 0 {
         n -= 1;
-        let nil = get_nil(vm);
+        let nil = vm.get_nil();
         vm.symbol_table = create_symbol(vm, nil);
     }
 
-    let mut name = get_nil(vm);
+    let mut name = vm.get_nil();
 
     loop {
         let c = get_byte(vm);
 
         if c == 44 {
             vm.symbol_table = create_symbol(vm, name);
-            name = get_nil(vm);
+            name = vm.get_nil();
             continue;
         }
 
@@ -246,7 +200,7 @@ fn build_symbol_table(vm: &mut Vm) {
 fn set_global(vm: &mut Vm, object: Object) {
     let index = Object::Number(get_car_index(vm.symbol_table) as u64);
     vm.heap[get_car_index(index)] = object;
-    vm.symbol_table = get_cdr(vm, vm.symbol_table);
+    vm.symbol_table = vm.get_cdr(vm.symbol_table);
 }
 
 fn decode(vm: &mut Vm) {
@@ -299,7 +253,7 @@ fn decode(vm: &mut Vm) {
             if op > 4 {
                 let obj = vm.pop();
                 let rib2 = allocate_rib2(vm, n, NUMBER_0, obj);
-                let nil = get_nil(vm);
+                let nil = vm.get_nil();
                 n = allocate_rib(vm, rib2, nil, CLOSURE_TAG);
 
                 if unwrap_object(&vm.stack) == unwrap_object(&NUMBER_0) {
@@ -313,124 +267,27 @@ fn decode(vm: &mut Vm) {
         }
 
         let c = allocate_rib(vm, Object::Number(op as u64), n, Object::Number(0));
-        vm.heap[get_cdr_index(c)] = vm.heap[get_tos_index(vm)];
-        vm.heap[get_tos_index(vm)] = c;
+        vm.heap[get_cdr_index(c)] = vm.heap[vm.get_tos_index()];
+        vm.heap[vm.get_tos_index()] = c;
     }
 
-    let car = get_car(vm, n);
-    let tag = get_tag(vm, car);
+    let car = vm.get_car(n);
+    let tag = vm.get_tag(car);
 
-    vm.program_counter = get_tag(vm, tag);
+    vm.program_counter = vm.get_tag(tag);
 }
 
 fn setup_stack(vm: &mut Vm) {
     vm.push(NUMBER_0, PAIR_TAG);
     vm.push(NUMBER_0, PAIR_TAG);
 
-    let first = get_cdr(vm, vm.stack);
+    let first = vm.get_cdr(vm.stack);
     vm.heap[get_cdr_index(vm.stack)] = NUMBER_0;
     vm.heap[get_tag_index(vm.stack)] = first;
 
     vm.heap[get_car_index(first)] = tag_number(INSTRUCTION_HALT as i64);
     vm.heap[get_cdr_index(first)] = NUMBER_0;
     vm.heap[get_tag_index(first)] = PAIR_TAG;
-}
-
-fn run(vm: &mut Vm) {
-    loop {
-        let instruction = get_car(vm, vm.program_counter);
-        println!("{}", unwrap_object(&instruction) as i64);
-        vm.advance_program_counter();
-        let instruction = get_car(vm, vm.program_counter);
-        println!("{}", unwrap_object(&instruction) as i64);
-
-        match unwrap_object(&instruction) {
-            INSTRUCTION_HALT => exit(None),
-            INSTRUCTION_APPLY => {
-                let jump = get_tag(vm, vm.program_counter) == NUMBER_0;
-
-                if !is_rib(&code(vm)) {
-                    let code_obj = code(vm);
-
-                    vm.operate_primitive(
-                        Primitive::from_u64(unwrap_object(&code_obj)).expect("valid primitive"),
-                    );
-
-                    if jump {
-                        vm.program_counter = get_continuation(vm);
-                        vm.heap[get_cdr_index(vm.stack)] = get_car(vm, vm.program_counter);
-                    }
-
-                    vm.advance_program_counter();
-                } else {
-                    let code_object = code(vm);
-                    let argc = get_car(vm, code_object);
-                    vm.heap[get_car_index(vm.program_counter)] = code(vm);
-
-                    let proc_obj = proc(vm);
-                    let mut s2 = allocate_rib(vm, NUMBER_0, proc_obj, PAIR_TAG);
-
-                    for _ in 0..unwrap_object(&argc) {
-                        let pop_obj = vm.pop();
-                        s2 = allocate_rib(vm, pop_obj, s2, PAIR_TAG);
-                    }
-
-                    let c2 =
-                        Object::Number(list_tail(vm, unwrap_object(&s2) as usize, argc) as u64);
-
-                    if jump {
-                        let k = get_continuation(vm);
-                        vm.heap[get_car_index(c2)] = get_car(vm, k);
-                        vm.heap[get_tag_index(c2)] = get_tag(vm, k);
-                    } else {
-                        vm.heap[get_car_index(c2)] = vm.stack;
-                        vm.heap[get_tag_index(c2)] = get_tag(vm, vm.program_counter);
-                    }
-
-                    vm.stack = s2;
-
-                    let new_pc = get_car(vm, vm.program_counter);
-                    vm.heap[get_car_index(vm.program_counter)] = instruction;
-                    vm.program_counter = get_tag(vm, new_pc);
-                }
-            }
-            INSTRUCTION_SET => {
-                let x = vm.pop();
-
-                let rib = if !is_rib(&get_cdr(vm, vm.program_counter)) {
-                    let cdr_obj = get_cdr(vm, vm.program_counter);
-                    let stack = unwrap_object(&vm.stack) as usize;
-                    Object::Rib(list_tail(vm, stack, cdr_obj) as u64)
-                } else {
-                    get_cdr(vm, vm.program_counter)
-                };
-
-                vm.heap[get_car_index(rib)] = x;
-
-                vm.advance_program_counter();
-            }
-            INSTRUCTION_GET => {
-                let proc_obj = proc(vm);
-                vm.push(proc_obj, PAIR_TAG);
-                vm.advance_program_counter();
-            }
-            INSTRUCTION_CONSTANT => {
-                let object = get_cdr(vm, vm.program_counter);
-                vm.push(object, PAIR_TAG);
-                vm.advance_program_counter();
-            }
-            INSTRUCTION_IF => {
-                let p = unwrap_object(&vm.pop());
-                let false_unwrapped = unwrap_object(&vm.r#false);
-                if p != false_unwrapped {
-                    vm.program_counter = get_cdr(vm, vm.program_counter);
-                } else {
-                    vm.program_counter = get_tag(vm, vm.program_counter);
-                }
-            }
-            _ => exit(Some(ExitCode::IllegalInstruction)),
-        }
-    }
 }
 
 fn create_symbol(vm: &mut Vm, name: Object) -> Object {
@@ -442,7 +299,7 @@ fn create_symbol(vm: &mut Vm, name: Object) -> Object {
 
 fn allocate_rib(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
     vm.push(car, cdr);
-    let stack = get_cdr(vm, vm.stack);
+    let stack = vm.get_cdr(vm.stack);
     let allocated = vm.stack;
 
     vm.heap[get_cdr_index(allocated)] = vm.heap[get_tag_index(allocated)];
@@ -455,7 +312,7 @@ fn allocate_rib(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
 
 fn allocate_rib2(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
     vm.push(car, tag);
-    let stack = get_cdr(vm, vm.stack);
+    let stack = vm.get_cdr(vm.stack);
     let allocated = vm.stack;
 
     vm.heap[get_cdr_index(allocated)] = cdr;
@@ -468,9 +325,9 @@ fn allocate_rib2(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
 fn list_length(vm: &mut Vm, mut list: Object) -> Object {
     let mut len = 0;
 
-    while is_rib(&list) && unwrap_object(&get_tag(vm, list)) == 0 {
+    while is_rib(&list) && unwrap_object(&vm.get_tag(list)) == 0 {
         len += 1;
-        list = get_cdr(vm, list)
+        list = vm.get_cdr(list)
     }
 
     tag_number(len)
@@ -518,13 +375,112 @@ impl<'a> Vm<'a> {
         }
     }
 
+    pub fn run(&mut self) {
+        loop {
+            let instruction = self.get_car(self.program_counter);
+            println!("{}", unwrap_object(&instruction) as i64);
+            self.advance_program_counter();
+            let instruction = self.get_car(self.program_counter);
+            println!("{}", unwrap_object(&instruction) as i64);
+
+            match unwrap_object(&instruction) {
+                INSTRUCTION_HALT => exit(None),
+                INSTRUCTION_APPLY => {
+                    let jump = self.get_tag(self.program_counter) == NUMBER_0;
+
+                    if !is_rib(&code(self)) {
+                        let code_obj = code(self);
+
+                        self.operate_primitive(
+                            Primitive::from_u64(unwrap_object(&code_obj)).expect("valid primitive"),
+                        );
+
+                        if jump {
+                            self.program_counter = get_continuation(self);
+                            self.heap[get_cdr_index(self.stack)] =
+                                self.get_car(self.program_counter);
+                        }
+
+                        self.advance_program_counter();
+                    } else {
+                        let code_object = code(self);
+                        let argc = self.get_car(code_object);
+                        self.heap[get_car_index(self.program_counter)] = code(self);
+
+                        let proc_obj = proc(self);
+                        let mut s2 = allocate_rib(self, NUMBER_0, proc_obj, PAIR_TAG);
+
+                        for _ in 0..unwrap_object(&argc) {
+                            let pop_obj = self.pop();
+                            s2 = allocate_rib(self, pop_obj, s2, PAIR_TAG);
+                        }
+
+                        let c2 = Object::Number(
+                            list_tail(self, unwrap_object(&s2) as usize, argc) as u64
+                        );
+
+                        if jump {
+                            let k = get_continuation(self);
+                            self.heap[get_car_index(c2)] = self.get_car(k);
+                            self.heap[get_tag_index(c2)] = self.get_tag(k);
+                        } else {
+                            self.heap[get_car_index(c2)] = self.stack;
+                            self.heap[get_tag_index(c2)] = self.get_tag(self.program_counter);
+                        }
+
+                        self.stack = s2;
+
+                        let new_pc = self.get_car(self.program_counter);
+                        self.heap[get_car_index(self.program_counter)] = instruction;
+                        self.program_counter = self.get_tag(new_pc);
+                    }
+                }
+                INSTRUCTION_SET => {
+                    let x = self.pop();
+
+                    let rib = if !is_rib(&self.get_cdr(self.program_counter)) {
+                        let cdr_obj = self.get_cdr(self.program_counter);
+                        let stack = unwrap_object(&self.stack) as usize;
+                        Object::Rib(list_tail(self, stack, cdr_obj) as u64)
+                    } else {
+                        self.get_cdr(self.program_counter)
+                    };
+
+                    self.heap[get_car_index(rib)] = x;
+
+                    self.advance_program_counter();
+                }
+                INSTRUCTION_GET => {
+                    let proc_obj = proc(self);
+                    self.push(proc_obj, PAIR_TAG);
+                    self.advance_program_counter();
+                }
+                INSTRUCTION_CONSTANT => {
+                    let object = self.get_cdr(self.program_counter);
+                    self.push(object, PAIR_TAG);
+                    self.advance_program_counter();
+                }
+                INSTRUCTION_IF => {
+                    let p = unwrap_object(&self.pop());
+                    let false_unwrapped = unwrap_object(&self.r#false);
+                    if p != false_unwrapped {
+                        self.program_counter = self.get_cdr(self.program_counter);
+                    } else {
+                        self.program_counter = self.get_tag(self.program_counter);
+                    }
+                }
+                _ => exit(Some(ExitCode::IllegalInstruction)),
+            }
+        }
+    }
+
     fn advance_program_counter(&mut self) {
-        self.program_counter = get_tag(self, self.program_counter);
+        self.program_counter = self.get_tag(self.program_counter);
     }
 
     fn pop(&mut self) -> Object {
-        let value = get_car(self, self.stack);
-        self.stack = get_cdr(self, self.stack);
+        let value = self.get_car(self.stack);
+        self.stack = self.get_cdr(self.stack);
         value
     }
 
@@ -538,10 +494,52 @@ impl<'a> Vm<'a> {
         self.heap[self.allocation_index] = tag;
         self.allocation_index += 1;
 
-        self.stack = tag_rib((self.allocation_index - RIB_FIELD_COUNT) as u64);
+        self.stack = tag_rib((self.allocation_index - rib::FIELD_COUNT) as u64);
 
         if self.allocation_index == self.allocation_limit {
             // TODO Run GC.
+        }
+    }
+
+    fn get_tos_index(&self) -> usize {
+        get_car_index(self.stack)
+    }
+
+    fn get_rib(&mut self, index: Object) -> Rib<'_> {
+        let index = unwrap_object(&index) as usize;
+
+        Rib::new(
+            self.heap[index..index + rib::FIELD_COUNT]
+                .try_into()
+                .unwrap(),
+        )
+    }
+
+    fn get_car(&mut self, index: Object) -> Object {
+        self.get_rib(index).car()
+    }
+
+    fn get_cdr(&mut self, index: Object) -> Object {
+        self.get_rib(index).cdr()
+    }
+
+    fn get_tag(&mut self, index: Object) -> Object {
+        self.get_rib(index).tag()
+    }
+
+    fn get_true(&mut self) -> Object {
+        self.get_car(self.r#false)
+    }
+
+    fn get_nil(&mut self) -> Object {
+        self.get_cdr(self.r#false)
+    }
+
+    fn get_boolean(&mut self, value: bool) -> Object {
+        if value {
+            self.get_true()
+        } else {
+            self.r#false
         }
     }
 
@@ -568,31 +566,30 @@ impl<'a> Vm<'a> {
                 self.push(x, PAIR_TAG);
             }
             Primitive::Close => {
-                let mut tos_index = get_tos_index(self);
-                let x = get_car(self, Object::Number(tos_index as u64));
-                let y = get_cdr(self, self.stack);
-                tos_index = get_tos_index(self);
-                self.heap[tos_index] = allocate_rib(self, x, y, CLOSURE_TAG);
+                let x = self.get_car(Object::Number(self.get_tos_index() as u64));
+                let y = self.get_cdr(self.stack);
+
+                self.heap[self.get_tos_index()] = allocate_rib(self, x, y, CLOSURE_TAG);
             }
             Primitive::IsRib => {
                 let x = self.pop();
-                let cond = is_rib(&x);
-                let boolean = get_boolean(self, cond);
+                let condition = is_rib(&x);
+                let boolean = self.get_boolean(condition);
                 self.push(boolean, PAIR_TAG);
             }
             Primitive::Field0 => {
                 let x = self.pop();
-                let car = get_car(self, x);
+                let car = self.get_car(x);
                 self.push(car, PAIR_TAG);
             }
             Primitive::Field1 => {
                 let x = self.pop();
-                let cdr = get_cdr(self, x);
+                let cdr = self.get_cdr(x);
                 self.push(cdr, PAIR_TAG);
             }
             Primitive::Field2 => {
                 let x = self.pop();
-                let tag = get_tag(self, x);
+                let tag = self.get_tag(x);
                 self.push(tag, PAIR_TAG)
             }
             Primitive::SetField0 => {
@@ -660,7 +657,8 @@ impl<'a> Vm<'a> {
     fn operate_comparison(&mut self, operate: fn(u64, u64) -> bool) {
         let x = self.pop();
         let y = self.pop();
-        let condition = get_boolean(self, operate(unwrap_object(&x), unwrap_object(&y)));
+
+        let condition = self.get_boolean(operate(unwrap_object(&x), unwrap_object(&y)));
 
         self.push(condition, PAIR_TAG);
     }
@@ -696,8 +694,8 @@ fn main() {
     let symbol_table = vm.symbol_table;
     let rib = allocate_rib(&mut vm, NUMBER_0, symbol_table, CLOSURE_TAG);
     let r#false = vm.r#false;
-    let r#true = get_true(&mut vm);
-    let nil = get_nil(&mut vm);
+    let r#true = vm.get_true();
+    let nil = vm.get_nil();
 
     set_global(&mut vm, rib);
     set_global(&mut vm, r#false);
@@ -706,5 +704,5 @@ fn main() {
 
     setup_stack(&mut vm);
 
-    run(&mut vm);
+    vm.run();
 }
