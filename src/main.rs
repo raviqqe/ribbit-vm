@@ -488,9 +488,7 @@ fn run(environment: &mut Environment) {
                 }
             }
 
-            _ => {
-                exit(Some(ExitCode::IllegalInstruction));
-            }
+            _ => exit(Some(ExitCode::IllegalInstruction)),
         }
     }
 }
