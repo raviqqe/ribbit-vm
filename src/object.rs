@@ -5,10 +5,10 @@ pub enum Object {
 }
 
 impl Object {
-    pub const fn to_raw(&self) -> u64 {
+    pub const fn to_raw(self) -> u64 {
         match self {
-            Object::Number(number) => *number,
-            Object::Rib(number) => *number,
+            Object::Number(number) => number,
+            Object::Rib(number) => number,
         }
     }
 

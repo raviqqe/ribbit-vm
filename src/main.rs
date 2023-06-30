@@ -562,7 +562,7 @@ impl<'a> Vm<'a> {
                 d = weights[op as usize];
                 d + 2
             } {
-                n = Object::Number(&n.to_raw() - (d + 3));
+                n = Object::Number(n.to_raw() - d - 3);
             }
 
             if x > 90 {
@@ -590,7 +590,7 @@ impl<'a> Vm<'a> {
                     let nil = self.get_nil();
                     n = allocate_rib(self, rib2, nil, CLOSURE_TAG);
 
-                    if &self.stack.to_raw() == &NUMBER_0.to_raw() {
+                    if self.stack.to_raw() == NUMBER_0.to_raw() {
                         break;
                     }
                 } else if op > 0 {
