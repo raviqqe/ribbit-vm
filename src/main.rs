@@ -373,6 +373,7 @@ fn decode(environment: &mut Environment) {
 
     let car = get_car(environment, n);
     let tag = get_tag(environment, car);
+
     environment.program_counter = get_tag(environment, tag);
 }
 
