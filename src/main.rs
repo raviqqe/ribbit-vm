@@ -62,23 +62,23 @@ struct Vm<'a> {
 }
 
 fn list_tail(vm: &mut Vm, list: usize, index: Object) -> usize {
-    if unwrap_object(&index) == 0 {
+    if &index.to_raw() == 0 {
         list
     } else {
         let rib = vm.get_rib(Object::Number(list as u64));
-        let cdr = unwrap_object(&rib.cdr());
-        list_tail(vm, cdr as usize, Object::Number(unwrap_object(&index) - 1))
+        let cdr = &rib.cdr().to_raw();
+        list_tail(vm, cdr as usize, Object::Number(&index.to_raw() - 1))
     }
 }
 
 fn symbol_ref(vm: &mut Vm, n: Object) -> usize {
-    let sym_table_idx = unwrap_object(&vm.symbol_table) as usize;
+    let sym_table_idx = &vm.symbol_table.to_raw() as usize;
     list_tail(vm, sym_table_idx, n)
 }
 
 fn get_operand(vm: &mut Vm, object: Object) -> Object {
     let rib = if !is_rib(&object) {
-        Object::Rib(list_tail(vm, unwrap_object(&vm.stack) as usize, object) as u64)
+        Object::Rib(list_tail(vm, &vm.stack.to_raw() as usize, object) as u64)
     } else {
         object
     };
@@ -99,7 +99,7 @@ fn code(vm: &mut Vm) -> Object {
 fn get_continuation(vm: &mut Vm) -> Object {
     let mut stack = vm.stack;
 
-    while unwrap_object(&vm.get_tag(stack)) != 0 {
+    while &vm.get_tag(stack).to_raw() != 0 {
         stack = vm.get_cdr(stack);
     }
 
@@ -135,17 +135,17 @@ fn get_byte(vm: &mut Vm) -> u8 {
 
 fn get_car_index(index: Object) -> usize {
     // TODO Check this conversion
-    unwrap_object(&index).try_into().unwrap()
+    &index.to_raw().try_into().unwrap()
 }
 
 fn get_cdr_index(index: Object) -> usize {
     // TODO Check this conversion
-    (unwrap_object(&index) + 1).try_into().unwrap()
+    (&index.to_raw() + 1).try_into().unwrap()
 }
 
 fn get_tag_index(index: Object) -> usize {
     // TODO Check this conversion
-    (unwrap_object(&index) + 2).try_into().unwrap()
+    (&index.to_raw() + 2).try_into().unwrap()
 }
 
 fn build_symbol_table(vm: &mut Vm) {
@@ -199,12 +199,12 @@ fn decode(vm: &mut Vm) {
         n = Object::Number(x as u64);
         op = -1;
 
-        while unwrap_object(&n) > {
+        while &n.to_raw() > {
             op += 1;
             d = weights[op as usize];
             d + 2
         } {
-            n = Object::Number(unwrap_object(&n) - (d + 3));
+            n = Object::Number(&n.to_raw() - (d + 3));
         }
 
         if x > 90 {
@@ -215,11 +215,11 @@ fn decode(vm: &mut Vm) {
                 vm.push(NUMBER_0, NUMBER_0);
             }
 
-            if unwrap_object(&n) >= d {
-                n = if unwrap_object(&n) == d {
+            if &n.to_raw() >= d {
+                n = if &n.to_raw() == d {
                     Object::Number(get_int(vm, 0) as u64)
                 } else {
-                    let int = get_int(vm, (unwrap_object(&n) - d - 1) as i64);
+                    let int = get_int(vm, (&n.to_raw() - d - 1) as i64);
                     Object::Rib(symbol_ref(vm, Object::Number(int as u64)) as u64)
                 }
             } else {
@@ -236,7 +236,7 @@ fn decode(vm: &mut Vm) {
                 let nil = vm.get_nil();
                 n = allocate_rib(vm, rib2, nil, CLOSURE_TAG);
 
-                if unwrap_object(&vm.stack) == unwrap_object(&NUMBER_0) {
+                if &vm.stack.to_raw() == &NUMBER_0.to_raw() {
                     break;
                 }
             } else if op > 0 {
@@ -486,7 +486,7 @@ impl<'a> Vm<'a> {
     }
 
     fn get_rib(&mut self, index: Object) -> Rib<'_> {
-        let index = unwrap_object(&index) as usize;
+        let index = index.to_raw() as usize;
 
         Rib::new(
             self.heap[index..index + rib::FIELD_COUNT]
@@ -619,26 +619,23 @@ impl<'a> Vm<'a> {
             Primitive::PutC => {
                 let x = self.pop();
 
-                print!("{}", unwrap_object(&x) as u8 as char);
+                print!("{}", x.to_raw() as u8 as char);
             }
         }
     }
 
     fn operate_binary(&mut self, operate: fn(u64, u64) -> u64) {
-        let x = self.pop();
-        let y = self.pop();
+        let x = self.pop().to_raw();
+        let y = self.pop().to_raw();
 
-        self.push(
-            Object::Number(operate(unwrap_object(&x), unwrap_object(&y))),
-            PAIR_TAG,
-        );
+        self.push(Object::Number(operate(x, y)), PAIR_TAG);
     }
 
     fn operate_comparison(&mut self, operate: fn(u64, u64) -> bool) {
-        let x = self.pop();
-        let y = self.pop();
+        let x = self.pop().to_raw();
+        let y = self.pop().to_raw();
 
-        let condition = self.get_boolean(operate(unwrap_object(&x), unwrap_object(&y)));
+        let condition = self.get_boolean(operate(x, y));
 
         self.push(condition, PAIR_TAG);
     }
