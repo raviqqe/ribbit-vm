@@ -62,23 +62,23 @@ struct Vm<'a> {
 }
 
 fn list_tail(vm: &mut Vm, list: usize, index: Object) -> usize {
-    if &index.to_raw() == 0 {
+    if index.to_raw() == 0 {
         list
     } else {
         let rib = vm.get_rib(Object::Number(list as u64));
-        let cdr = &rib.cdr().to_raw();
+        let cdr = rib.cdr().to_raw();
         list_tail(vm, cdr as usize, Object::Number(&index.to_raw() - 1))
     }
 }
 
 fn symbol_ref(vm: &mut Vm, n: Object) -> usize {
-    let sym_table_idx = &vm.symbol_table.to_raw() as usize;
+    let sym_table_idx = vm.symbol_table.to_raw() as usize;
     list_tail(vm, sym_table_idx, n)
 }
 
 fn get_operand(vm: &mut Vm, object: Object) -> Object {
     let rib = if !is_rib(&object) {
-        Object::Rib(list_tail(vm, &vm.stack.to_raw() as usize, object) as u64)
+        Object::Rib(list_tail(vm, vm.stack.to_raw() as usize, object) as u64)
     } else {
         object
     };
@@ -287,7 +287,7 @@ fn allocate_rib(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
 
     vm.stack = stack;
 
-    Object::Rib(unwrap_object(&allocated))
+    Object::Rib(allocated.to_raw())
 }
 
 fn allocate_rib2(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
@@ -299,13 +299,13 @@ fn allocate_rib2(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
 
     vm.stack = stack;
 
-    Object::Rib(unwrap_object(&allocated))
+    Object::Rib(allocated.to_raw())
 }
 
 fn list_length(vm: &mut Vm, mut list: Object) -> Object {
     let mut len = 0;
 
-    while is_rib(&list) && unwrap_object(&vm.get_tag(list)) == 0 {
+    while is_rib(&list) && vm.get_tag(list.to_raw()) == 0 {
         len += 1;
         list = vm.get_cdr(list)
     }
@@ -358,12 +358,12 @@ impl<'a> Vm<'a> {
     pub fn run(&mut self) {
         loop {
             let instruction = self.get_car(self.program_counter);
-            println!("{}", unwrap_object(&instruction) as i64);
+            println!("{}", instruction.to_raw() as i64);
             self.advance_program_counter();
             let instruction = self.get_car(self.program_counter);
-            println!("{}", unwrap_object(&instruction) as i64);
+            println!("{}", instruction.to_raw() as i64);
 
-            match unwrap_object(&instruction) {
+            match instruction.to_raw() {
                 INSTRUCTION_HALT => exit(None),
                 INSTRUCTION_APPLY => {
                     let jump = self.get_tag(self.program_counter) == NUMBER_0;
@@ -372,7 +372,7 @@ impl<'a> Vm<'a> {
                         let code_obj = code(self);
 
                         self.operate_primitive(
-                            Primitive::from_u64(unwrap_object(&code_obj)).expect("valid primitive"),
+                            Primitive::from_u64(code_obj.to_raw()).expect("valid primitive"),
                         );
 
                         if jump {
@@ -390,13 +390,13 @@ impl<'a> Vm<'a> {
                         let proc_obj = proc(self);
                         let mut s2 = allocate_rib(self, NUMBER_0, proc_obj, PAIR_TAG);
 
-                        for _ in 0..unwrap_object(&argc) {
+                        for _ in 0..argc.to_raw() {
                             let pop_obj = self.pop();
                             s2 = allocate_rib(self, pop_obj, s2, PAIR_TAG);
                         }
 
                         let c2 = Object::Number(
-                            list_tail(self, unwrap_object(&s2) as usize, argc) as u64
+                            list_tail(self, s2.to_raw() as usize, argc) as u64
                         );
 
                         if jump {
@@ -420,7 +420,7 @@ impl<'a> Vm<'a> {
 
                     let rib = if !is_rib(&self.get_cdr(self.program_counter)) {
                         let cdr_obj = self.get_cdr(self.program_counter);
-                        let stack = unwrap_object(&self.stack) as usize;
+                        let stack = self.stack.to_raw() as usize;
                         Object::Rib(list_tail(self, stack, cdr_obj) as u64)
                     } else {
                         self.get_cdr(self.program_counter)
