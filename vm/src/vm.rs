@@ -498,12 +498,8 @@ impl<'a> Vm<'a> {
     // Decoding
 
     fn decode_symbol_table(&mut self) {
-        let mut count = self.read_integer(0);
-
-        while count > 0 {
-            count -= 1;
-            let nil = self.get_nil();
-            self.create_symbol(nil);
+        for _ in 0..self.read_integer(0) {
+            self.create_symbol(self.get_nil());
         }
 
         let mut name = self.get_nil();
