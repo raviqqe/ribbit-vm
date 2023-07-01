@@ -377,6 +377,7 @@ impl<'a> Vm<'a> {
                 self.push(x, PAIR_TAG);
             }
             Primitive::Close => {
+                // TODO Review this.
                 let x = self.get_car(self.heap[self.get_tos_index()]);
                 let y = self.get_cdr(self.stack);
 
