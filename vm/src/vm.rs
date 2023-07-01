@@ -510,13 +510,13 @@ impl<'a> Vm<'a> {
 
         loop {
             match self.read_byte() {
-                44 => {
+                b',' => {
                     self.create_symbol(name);
                     name = self.get_nil();
                 }
-                59 => break,
-                c => {
-                    name = self.allocate_rib(Object::Number(c as u64), name, PAIR_TAG);
+                b';' => break,
+                character => {
+                    name = self.allocate_rib(Object::Number(character as u64), name, PAIR_TAG);
                 }
             }
         }
