@@ -118,12 +118,13 @@ impl<'a> Vm<'a> {
         self.push(ZERO, PAIR_TAG);
 
         let first = self.get_cdr(self.stack);
-        self.heap[get_cdr_index(self.stack)] = ZERO;
-        self.heap[get_tag_index(self.stack)] = first;
+        *self.get_cdr_mut(self.stack) = ZERO;
+        *self.get_tag_mut(self.stack) = first;
 
-        self.heap[get_car_index(first)] = Object::Number(Instruction::Halt as u64);
-        self.heap[get_cdr_index(first)] = ZERO;
-        self.heap[get_tag_index(first)] = PAIR_TAG;
+        *self.get_car_mut(first) = Object::Number(Instruction::Halt as u64);
+        *self.get_cdr_mut(first) = ZERO;
+        // TODO Do we need this?
+        *self.get_tag_mut(first) = PAIR_TAG;
     }
 
     pub fn run(&mut self) -> Result<(), Error> {
