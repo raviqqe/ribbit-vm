@@ -436,7 +436,7 @@ impl<'a> Vm<'a> {
                 self.operate_binary(Div::div);
             }
             Primitive::GetC => {
-                let mut buffer = vec![0u8; 1];
+                let mut buffer = [0u8];
 
                 // TODO Handle errors.
                 stdin().read_exact(&mut buffer).unwrap();
