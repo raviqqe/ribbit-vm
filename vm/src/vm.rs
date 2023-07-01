@@ -492,7 +492,7 @@ impl<'a> Vm<'a> {
     fn decode_symbol_table(&mut self) {
         // Initialize non-printable symbols.
         for _ in 0..self.read_integer(0) {
-            self.create_symbol(self.get_nil());
+            self.initialize_symbol(self.get_nil());
         }
 
         let mut name = self.get_nil();
@@ -500,7 +500,7 @@ impl<'a> Vm<'a> {
         loop {
             match self.read_byte() {
                 b',' => {
-                    self.create_symbol(name);
+                    self.initialize_symbol(name);
                     name = self.get_nil();
                 }
                 b';' => break,
@@ -510,10 +510,10 @@ impl<'a> Vm<'a> {
             }
         }
 
-        self.create_symbol(name);
+        self.initialize_symbol(name);
     }
 
-    fn create_symbol(&mut self, name: Object) {
+    fn initialize_symbol(&mut self, name: Object) {
         let len = self.get_list_length(name);
         let list = self.allocate_rib(name, len, STRING_TAG);
         let symbol = self.allocate_rib(self.r#false, list, SYMBOL_TAG);
