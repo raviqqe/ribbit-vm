@@ -503,7 +503,7 @@ impl<'a> Vm<'a> {
         while count > 0 {
             count -= 1;
             let nil = self.get_nil();
-            self.symbol_table = self.create_symbol(nil);
+            self.create_symbol(nil);
         }
 
         let mut name = self.get_nil();
@@ -511,7 +511,7 @@ impl<'a> Vm<'a> {
         loop {
             match self.read_byte() {
                 44 => {
-                    self.symbol_table = self.create_symbol(name);
+                    self.create_symbol(name);
                     name = self.get_nil();
                 }
                 59 => break,
@@ -521,14 +521,14 @@ impl<'a> Vm<'a> {
             }
         }
 
-        self.symbol_table = self.create_symbol(name);
+        self.create_symbol(name);
     }
 
-    fn create_symbol(&mut self, name: Object) -> Object {
+    fn create_symbol(&mut self, name: Object) {
         let len = self.get_list_length(name);
         let list = self.allocate_rib(name, len, STRING_TAG);
         let symbol = self.allocate_rib(self.r#false, list, SYMBOL_TAG);
-        self.allocate_rib(symbol, self.symbol_table, PAIR_TAG)
+        self.symbol_table = self.allocate_rib(symbol, self.symbol_table, PAIR_TAG);
     }
 
     fn decode_codes(&mut self) {
