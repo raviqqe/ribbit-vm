@@ -618,9 +618,9 @@ impl<'a> Vm<'a> {
         }
     }
 
-    fn read_integer(&mut self, number: i64) -> i64 {
+    fn read_integer(&mut self, mut n: i64) -> i64 {
         let x = self.read_code();
-        let n = number * 46;
+        n *= 46;
 
         if x < 46 {
             n + x
