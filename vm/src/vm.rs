@@ -517,7 +517,7 @@ impl<'a> Vm<'a> {
             self.initialize_symbol(self.get_nil());
         }
 
-        // Symbols names are encoded in a reversed order.
+        // Symbol names are encoded in a reversed order.
         let mut name = self.get_nil();
 
         loop {
