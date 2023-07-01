@@ -34,6 +34,21 @@ fn exit(code: Option<ExitCode>) -> ! {
     process::exit(code.map(|code| code as i32).unwrap_or(0))
 }
 
+fn get_car_index(index: Object) -> usize {
+    // TODO Check this conversion
+    index.to_raw().try_into().unwrap()
+}
+
+fn get_cdr_index(index: Object) -> usize {
+    // TODO Check this conversion
+    (&index.to_raw() + 1).try_into().unwrap()
+}
+
+fn get_tag_index(index: Object) -> usize {
+    // TODO Check this conversion
+    (&index.to_raw() + 2).try_into().unwrap()
+}
+
 pub struct Vm<'a> {
     // Roots
     stack: Object,
@@ -50,21 +65,6 @@ pub struct Vm<'a> {
     allocation_limit: usize,
     #[allow(dead_code)]
     scan: usize,
-}
-
-fn get_car_index(index: Object) -> usize {
-    // TODO Check this conversion
-    index.to_raw().try_into().unwrap()
-}
-
-fn get_cdr_index(index: Object) -> usize {
-    // TODO Check this conversion
-    (&index.to_raw() + 1).try_into().unwrap()
-}
-
-fn get_tag_index(index: Object) -> usize {
-    // TODO Check this conversion
-    (&index.to_raw() + 2).try_into().unwrap()
 }
 
 fn set_global(vm: &mut Vm, object: Object) {
