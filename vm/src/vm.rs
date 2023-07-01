@@ -5,6 +5,7 @@ use crate::{
     primitive::Primitive,
     rib::{self, Rib},
 };
+use num_traits::FromPrimitive;
 use std::{
     convert::TryInto,
     io::{stdin, Read},
@@ -127,10 +128,7 @@ impl<'a> Vm<'a> {
     pub fn run(&mut self) -> Result<(), Error> {
         loop {
             let instruction = self.get_car(self.program_counter);
-            println!("{}", instruction.to_raw() as i64);
-            self.advance_program_counter();
-            let instruction = self.get_car(self.program_counter);
-            println!("{}", instruction.to_raw() as i64);
+            println!("{:?}", Instruction::from_u64(instruction.to_raw()).unwrap());
 
             match instruction.to_raw() {
                 Instruction::HALT => return Ok(()),
@@ -492,6 +490,7 @@ impl<'a> Vm<'a> {
     // Input decoding
 
     fn decode_symbol_table(&mut self) {
+        // Initialize non-printable symbols.
         for _ in 0..self.read_integer(0) {
             self.create_symbol(self.get_nil());
         }
@@ -570,6 +569,7 @@ impl<'a> Vm<'a> {
                         break;
                     }
 
+                    // TODO Review this.
                     op = Instruction::CONSTANT as i64;
                 } else if op > 0 {
                     op -= 1;
@@ -578,15 +578,13 @@ impl<'a> Vm<'a> {
                 }
             }
 
-            let c = self.allocate_rib(Object::Number(op as u64), n, ZERO);
-            self.heap[get_cdr_index(c)] = self.heap[self.get_tos_index()];
-            self.heap[self.get_tos_index()] = c;
+            // TODO Review this.
+            let instruction = self.allocate_rib(Object::Number(op as u64), n, ZERO);
+            self.heap[get_tag_index(instruction)] = self.heap[self.get_tos_index()];
+            self.heap[self.get_tos_index()] = instruction;
         }
 
-        let car = self.get_car(n);
-        let tag = self.get_tag(car);
-
-        self.program_counter = self.get_tag(tag);
+        self.program_counter = self.get_tag(self.get_car(n));
     }
 
     fn read_byte(&mut self) -> u8 {
