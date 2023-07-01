@@ -296,7 +296,7 @@ impl<'a> Vm<'a> {
         self.get_cdr(self.r#false)
     }
 
-    fn get_boolean(&mut self, value: bool) -> Object {
+    fn get_boolean(&self, value: bool) -> Object {
         if value {
             self.get_true()
         } else {
@@ -370,7 +370,6 @@ impl<'a> Vm<'a> {
             }
             Primitive::Pop => {
                 self.pop();
-                // TODO Check what is the meaning of true?
             }
             Primitive::Skip => {
                 let x = self.pop();
@@ -378,30 +377,26 @@ impl<'a> Vm<'a> {
                 self.push(x, PAIR_TAG);
             }
             Primitive::Close => {
-                let x = self.get_car(Object::Number(self.get_tos_index() as u64));
+                let x = self.get_car(self.heap[self.get_tos_index()]);
                 let y = self.get_cdr(self.stack);
 
                 self.heap[self.get_tos_index()] = self.allocate_rib(x, y, CLOSURE_TAG);
             }
             Primitive::IsRib => {
                 let x = self.pop();
-                let condition = self.get_boolean(x.is_rib());
-                self.push(condition, PAIR_TAG);
+                self.push(self.get_boolean(x.is_rib()), PAIR_TAG);
             }
             Primitive::Field0 => {
                 let x = self.pop();
-                let car = self.get_car(x);
-                self.push(car, PAIR_TAG);
+                self.push(self.get_car(x), PAIR_TAG);
             }
             Primitive::Field1 => {
                 let x = self.pop();
-                let cdr = self.get_cdr(x);
-                self.push(cdr, PAIR_TAG);
+                self.push(self.get_cdr(x), PAIR_TAG);
             }
             Primitive::Field2 => {
                 let x = self.pop();
-                let tag = self.get_tag(x);
-                self.push(tag, PAIR_TAG)
+                self.push(self.get_tag(x), PAIR_TAG)
             }
             Primitive::SetField0 => {
                 let x = self.pop();
