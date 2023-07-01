@@ -117,14 +117,15 @@ impl<'a> Vm<'a> {
         self.push(ZERO, PAIR_TAG);
         self.push(ZERO, PAIR_TAG);
 
-        let first = self.get_cdr(self.stack);
-        *self.get_cdr_mut(self.stack) = ZERO;
-        *self.get_tag_mut(self.stack) = first;
+        let instruction = self.get_cdr(self.stack);
 
-        *self.get_car_mut(first) = Object::Number(Instruction::Halt as u64);
-        *self.get_cdr_mut(first) = ZERO;
-        // TODO Do we need this?
-        *self.get_tag_mut(first) = PAIR_TAG;
+        *self.get_cdr_mut(self.stack) = ZERO;
+        *self.get_tag_mut(self.stack) = instruction;
+
+        *self.get_car_mut(instruction) = Object::Number(Instruction::Halt as u64);
+        // TODO Do we need these?
+        *self.get_cdr_mut(instruction) = ZERO;
+        *self.get_tag_mut(instruction) = PAIR_TAG;
     }
 
     pub fn run(&mut self) -> Result<(), Error> {
