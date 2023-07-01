@@ -1,8 +1,6 @@
-[package]
-name = "rvm"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = ["command", "vm"]
 
-[dependencies]
-num-derive = "0.4.0"
-num-traits = "0.2.15"
+[profile.release]
+lto = true
+panic = "abort"
