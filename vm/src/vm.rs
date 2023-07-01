@@ -127,7 +127,7 @@ impl<'a> Vm<'a> {
     pub fn run(&mut self) -> Result<(), Error> {
         loop {
             let instruction = self.get_car(self.program_counter);
-            #[cfg(feature= "trace")]
+            #[cfg(feature = "trace")]
             println!("instruction: {}", instruction.to_raw());
 
             match instruction.to_raw() {
@@ -574,7 +574,7 @@ impl<'a> Vm<'a> {
                 }
             }
 
-            #[cfg(feature= "trace")]
+            #[cfg(feature = "trace")]
             println!("decode: {} {}", op, x);
 
             // TODO Review this.
