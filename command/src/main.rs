@@ -10,7 +10,7 @@ fn main() {
         }
     };
 
-    if let Err(error) = Vm::new(input.as_bytes()).run() {
+    if let Err(error) = Vm::new(input.trim().as_bytes()).run() {
         exit(match error {
             Error::IllegalInstruction | Error::IllegalPrimitive => 6,
         })
