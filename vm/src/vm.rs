@@ -356,6 +356,9 @@ impl<'a> Vm<'a> {
     }
 
     fn operate_primitive(&mut self, primitive: Primitive) {
+        #[cfg(feature = "trace")]
+        println!("primitive: {}", primitive as usize);
+
         match primitive {
             Primitive::Rib => {
                 let rib = self.allocate_rib(ZERO, ZERO, ZERO);
