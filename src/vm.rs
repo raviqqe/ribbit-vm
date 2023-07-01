@@ -1,12 +1,14 @@
-use crate::instruction::Instruction;
-use crate::object::Object;
-use crate::primitive::Primitive;
-use crate::rib::{self, Rib};
+use crate::{
+    error::Error,
+    instruction::Instruction,
+    object::Object,
+    primitive::Primitive,
+    rib::{self, Rib},
+};
 use std::{
     convert::TryInto,
     io::{stdin, Read},
     ops::{Add, Div, Mul, Sub},
-    process,
 };
 
 const MAX_OBJECT_COUNT: usize = 1 << 14;
@@ -24,15 +26,6 @@ const CLOSURE_TAG: Object = Object::Number(1);
 const SYMBOL_TAG: Object = Object::Number(2);
 const STRING_TAG: Object = Object::Number(3);
 const SINGLETON_TAG: Object = Object::Number(5);
-
-#[repr(i32)]
-enum ExitCode {
-    IllegalInstruction = 6,
-}
-
-fn exit(code: Option<ExitCode>) -> ! {
-    process::exit(code.map(|code| code as i32).unwrap_or(0))
-}
 
 fn get_rib_index(index: Object, field: usize) -> usize {
     // TODO Check this conversion
@@ -131,7 +124,7 @@ impl<'a> Vm<'a> {
         self.symbol_table = self.get_cdr(self.symbol_table);
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> Result<(), Error> {
         loop {
             let instruction = self.get_car(self.program_counter);
             println!("{}", instruction.to_raw() as i64);
@@ -140,14 +133,15 @@ impl<'a> Vm<'a> {
             println!("{}", instruction.to_raw() as i64);
 
             match instruction.to_raw() {
-                Instruction::HALT => exit(None),
+                Instruction::HALT => return Ok(()),
                 Instruction::APPLY => {
                     let jump = self.get_tag(self.program_counter) == ZERO;
                     let code = self.get_code();
 
                     if !code.is_rib() {
                         self.operate_primitive(
-                            Primitive::try_from(code.to_raw()).expect("valid primitive"),
+                            Primitive::try_from(code.to_raw())
+                                .map_err(|_| Error::IllegalPrimitive)?,
                         );
 
                         if jump {
@@ -219,7 +213,7 @@ impl<'a> Vm<'a> {
                         self.get_tag(self.program_counter)
                     };
                 }
-                _ => exit(Some(ExitCode::IllegalInstruction)),
+                _ => return Err(Error::IllegalInstruction),
             }
         }
     }
