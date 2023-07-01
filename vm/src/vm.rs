@@ -639,14 +639,14 @@ impl<'a> Vm<'a> {
     }
 }
 
-#[cfg(tests)]
+#[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn define_global() {
         // (define x 42)
-        Vm::new("#di,!tes-1dleif,1gra,,,,bir;)lk>m?mki#!):nlkl!':nlkm!(:nlku{")
+        Vm::new(b"#di,!tes-1dleif,1gra,,,,bir;)lk>m?mki#!):nlkl!':nlkm!(:nlku{")
             .run()
             .unwrap();
     }
