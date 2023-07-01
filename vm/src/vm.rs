@@ -55,7 +55,7 @@ pub struct Vm<'a> {
     position: usize,
     input: &'a [u8],
 
-    heap: [Object; HEAP_SIZE],
+    heap: Vec<Object>,
     symbol_table: Object,
 
     allocation_index: usize,
@@ -73,7 +73,7 @@ impl<'a> Vm<'a> {
 
             position: 0,
             input,
-            heap: [ZERO; HEAP_SIZE],
+            heap: vec![ZERO; HEAP_SIZE],
             symbol_table: ZERO,
 
             allocation_index: HEAP_BOTTOM,
@@ -407,7 +407,8 @@ impl<'a> Vm<'a> {
                 let x = self.get_car(self.heap[self.get_tos_index()]);
                 let y = self.get_cdr(self.stack);
 
-                self.heap[self.get_tos_index()] = self.allocate_rib(x, y, CLOSURE_TAG);
+                let index = self.get_tos_index();
+                self.heap[index] = self.allocate_rib(x, y, CLOSURE_TAG);
             }
             Primitive::IsRib => {
                 let x = self.pop();
@@ -605,7 +606,8 @@ impl<'a> Vm<'a> {
             // TODO Review this.
             let instruction = self.allocate_rib(Object::Number(op as u64), n, ZERO);
             self.heap[get_tag_index(instruction)] = self.heap[self.get_tos_index()];
-            self.heap[self.get_tos_index()] = instruction;
+            let index = self.get_tos_index();
+            self.heap[index] = instruction;
         }
 
         self.program_counter = self.get_tag(self.get_car(n));
