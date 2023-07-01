@@ -569,6 +569,8 @@ impl<'a> Vm<'a> {
                     if self.stack.to_raw() == ZERO.to_raw() {
                         break;
                     }
+
+                    op = Instruction::CONSTANT as i64;
                 } else if op > 0 {
                     op -= 1;
                 } else {
