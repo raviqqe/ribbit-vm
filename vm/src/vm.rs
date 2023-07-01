@@ -156,7 +156,7 @@ impl<'a> Vm<'a> {
                     } else {
                         let code_object = self.get_code();
                         let argument_count = self.get_car(code_object);
-                        self.heap[get_car_index(self.program_counter)] = self.get_code();
+                        *self.get_car_mut(self.program_counter) = self.get_code();
 
                         let procedure = self.get_procedure();
                         let mut s2 = self.allocate_rib(ZERO, procedure, PAIR_TAG);
