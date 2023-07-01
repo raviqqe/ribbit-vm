@@ -196,8 +196,7 @@ impl<'a> Vm<'a> {
                     self.advance_program_counter();
                 }
                 Instruction::GET => {
-                    let procedure = self.get_procedure();
-                    self.push(procedure, PAIR_TAG);
+                    self.push(self.get_procedure(), PAIR_TAG);
                     self.advance_program_counter();
                 }
                 Instruction::CONSTANT => {
