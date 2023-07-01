@@ -87,24 +87,29 @@ impl<'a> Vm<'a> {
     }
 
     fn initialize(&mut self) {
-        let init_0 = self.allocate_rib(ZERO, ZERO, SINGLETON_TAG);
-        self.r#false = self.allocate_rib(init_0, init_0, SINGLETON_TAG);
+        let r#true = self.allocate_rib(ZERO, ZERO, SINGLETON_TAG);
+        let nil = self.allocate_rib(ZERO, ZERO, SINGLETON_TAG);
+        self.r#false = self.allocate_rib(r#true, nil, SINGLETON_TAG);
 
         self.decode_symbol_table();
         self.decode_codes();
 
-        let symbol_table = self.symbol_table;
-        let rib = self.allocate_rib(ZERO, symbol_table, CLOSURE_TAG);
-        let r#false = self.r#false;
-        let r#true = self.get_true();
-        let nil = self.get_nil();
+        // Primitive 0
+        let rib = self.allocate_rib(ZERO, self.symbol_table, CLOSURE_TAG);
 
         self.initialize_global(rib);
-        self.initialize_global(r#false);
-        self.initialize_global(r#true);
-        self.initialize_global(nil);
+        self.initialize_global(self.r#false);
+        self.initialize_global(self.get_true());
+        self.initialize_global(self.get_nil());
 
         self.initialize_stack();
+    }
+
+    fn initialize_global(&mut self, object: Object) {
+        let index = Object::Number(get_car_index(self.symbol_table) as u64);
+
+        self.heap[get_car_index(index)] = object;
+        self.symbol_table = self.get_cdr(self.symbol_table);
     }
 
     fn initialize_stack(&mut self) {
@@ -118,12 +123,6 @@ impl<'a> Vm<'a> {
         self.heap[get_car_index(first)] = Object::Number(Instruction::Halt as u64);
         self.heap[get_cdr_index(first)] = ZERO;
         self.heap[get_tag_index(first)] = PAIR_TAG;
-    }
-
-    fn initialize_global(&mut self, object: Object) {
-        let index = Object::Number(get_car_index(self.symbol_table) as u64);
-        self.heap[get_car_index(index)] = object;
-        self.symbol_table = self.get_cdr(self.symbol_table);
     }
 
     pub fn run(&mut self) -> Result<(), Error> {
