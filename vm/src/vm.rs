@@ -564,8 +564,7 @@ impl<'a> Vm<'a> {
                 if op > 4 {
                     let object = self.pop();
                     let rib2 = self.allocate_rib2(n, ZERO, object);
-                    let nil = self.get_nil();
-                    n = self.allocate_rib(rib2, nil, CLOSURE_TAG);
+                    n = self.allocate_rib(rib2, self.get_nil(), CLOSURE_TAG);
 
                     if self.stack.to_raw() == ZERO.to_raw() {
                         break;
