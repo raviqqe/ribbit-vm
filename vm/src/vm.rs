@@ -506,22 +506,22 @@ impl<'a> Vm<'a> {
             self.symbol_table = self.create_symbol(nil);
         }
 
-        let mut name = self.get_nil();
+        let mut acc = self.get_nil();
 
         loop {
             match self.read_byte() {
                 44 => {
-                    self.symbol_table = self.create_symbol(name);
-                    name = self.get_nil();
+                    self.symbol_table = self.create_symbol(acc);
+                    acc = self.get_nil();
                 }
                 59 => break,
                 c => {
-                    name = self.allocate_rib(Object::Number(c as u64), name, PAIR_TAG);
+                    acc = self.allocate_rib(Object::Number(c as u64), acc, PAIR_TAG);
                 }
             }
         }
 
-        self.symbol_table = self.create_symbol(name);
+        self.symbol_table = self.create_symbol(acc);
     }
 
     fn create_symbol(&mut self, name: Object) -> Object {
