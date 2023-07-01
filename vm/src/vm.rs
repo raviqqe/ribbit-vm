@@ -562,16 +562,18 @@ impl<'a> Vm<'a> {
                     self.push(ZERO, ZERO);
                 }
 
-                if n.to_raw() >= d {
-                    n = if n.to_raw() == d {
+                n = if n.to_raw() >= d {
+                    if n.to_raw() == d {
                         Object::Number(self.get_input_integer(0) as u64)
                     } else {
                         let integer = self.get_input_integer((n.to_raw() - d - 1) as i64);
                         self.get_symbol_ref(Object::Number(integer as u64))
                     }
+                } else if op < 3 {
+                    self.get_symbol_ref(n)
                 } else {
-                    n = if op < 3 { self.get_symbol_ref(n) } else { n }
-                }
+                    n
+                };
 
                 if op > 4 {
                     let obj = self.pop();
