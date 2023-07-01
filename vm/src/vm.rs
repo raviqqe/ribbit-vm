@@ -106,6 +106,7 @@ impl<'a> Vm<'a> {
     }
 
     fn initialize_global(&mut self, object: Object) {
+        // TODO Review this.
         *self.get_car_mut(self.get_car(self.symbol_table)) = object;
         self.symbol_table = self.get_cdr(self.symbol_table);
     }
