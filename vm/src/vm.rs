@@ -183,8 +183,7 @@ impl<'a> Vm<'a> {
                     let x = self.pop();
 
                     let rib = if !self.get_cdr(self.program_counter).is_rib() {
-                        let cdr_obj = self.get_cdr(self.program_counter);
-                        self.get_list_tail(self.stack, cdr_obj)
+                        self.get_list_tail(self.stack, self.get_cdr(self.program_counter))
                     } else {
                         self.get_cdr(self.program_counter)
                     };
@@ -194,8 +193,8 @@ impl<'a> Vm<'a> {
                     self.advance_program_counter();
                 }
                 Instruction::GET => {
-                    let proc_obj = self.get_procedure();
-                    self.push(proc_obj, PAIR_TAG);
+                    let procedure = self.get_procedure();
+                    self.push(procedure, PAIR_TAG);
                     self.advance_program_counter();
                 }
                 Instruction::CONSTANT => {
