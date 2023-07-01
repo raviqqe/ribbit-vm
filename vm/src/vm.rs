@@ -3,7 +3,7 @@ use crate::{
     instruction::Instruction,
     object::Object,
     primitive::Primitive,
-    rib::{self, Rib},
+    rib::{self, Rib, RibMut},
 };
 use std::{
     convert::TryInto,
@@ -18,6 +18,8 @@ const HEAP_BOTTOM: usize = 0;
 const HEAP_MIDDLE: usize = HEAP_SIZE / 2;
 #[allow(dead_code)]
 const HEAP_TOP: usize = HEAP_SIZE;
+
+const INSTRUCTION_WEIGHTS: [u64; 6] = [20, 30, 0, 10, 11, 4];
 
 const ZERO: Object = Object::Number(0);
 
@@ -53,7 +55,7 @@ pub struct Vm<'a> {
     position: usize,
     input: &'a [u8],
 
-    heap: [Object; HEAP_SIZE],
+    heap: Vec<Object>,
     symbol_table: Object,
 
     allocation_index: usize,
@@ -71,7 +73,7 @@ impl<'a> Vm<'a> {
 
             position: 0,
             input,
-            heap: [ZERO; HEAP_SIZE],
+            heap: vec![ZERO; HEAP_SIZE],
             symbol_table: ZERO,
 
             allocation_index: HEAP_BOTTOM,
@@ -85,43 +87,45 @@ impl<'a> Vm<'a> {
     }
 
     fn initialize(&mut self) {
-        let init_0 = self.allocate_rib(ZERO, ZERO, SINGLETON_TAG);
-        self.r#false = self.allocate_rib(init_0, init_0, SINGLETON_TAG);
+        let r#true = self.allocate_rib(ZERO, ZERO, SINGLETON_TAG);
+        let nil = self.allocate_rib(ZERO, ZERO, SINGLETON_TAG);
+        self.r#false = self.allocate_rib(r#true, nil, SINGLETON_TAG);
 
-        self.decode_symbol_table();
+        self.decode_symbols();
         self.decode_codes();
 
-        let symbol_table = self.symbol_table;
-        let rib = self.allocate_rib(ZERO, symbol_table, CLOSURE_TAG);
-        let r#false = self.r#false;
-        let r#true = self.get_true();
-        let nil = self.get_nil();
+        // Primitive 0
+        let rib = self.allocate_rib(ZERO, self.symbol_table, CLOSURE_TAG);
 
+        // The symbol initialization order is important as they are listed in a symbol
+        // table in encoded bytecodes.
         self.initialize_global(rib);
-        self.initialize_global(r#false);
-        self.initialize_global(r#true);
-        self.initialize_global(nil);
+        self.initialize_global(self.r#false);
+        self.initialize_global(self.get_true());
+        self.initialize_global(self.get_nil());
 
         self.initialize_stack();
+    }
+
+    fn initialize_global(&mut self, object: Object) {
+        // TODO Review this.
+        *self.get_car_mut(self.get_car(self.symbol_table)) = object;
+        self.symbol_table = self.get_cdr(self.symbol_table);
     }
 
     fn initialize_stack(&mut self) {
         self.push(ZERO, PAIR_TAG);
         self.push(ZERO, PAIR_TAG);
 
-        let first = self.get_cdr(self.stack);
-        self.heap[get_cdr_index(self.stack)] = ZERO;
-        self.heap[get_tag_index(self.stack)] = first;
+        let instruction = self.get_cdr(self.stack);
 
-        self.heap[get_car_index(first)] = Object::Number(Instruction::Halt as u64);
-        self.heap[get_cdr_index(first)] = ZERO;
-        self.heap[get_tag_index(first)] = PAIR_TAG;
-    }
+        *self.get_cdr_mut(self.stack) = ZERO;
+        *self.get_tag_mut(self.stack) = instruction;
 
-    fn initialize_global(&mut self, object: Object) {
-        let index = Object::Number(get_car_index(self.symbol_table) as u64);
-        self.heap[get_car_index(index)] = object;
-        self.symbol_table = self.get_cdr(self.symbol_table);
+        *self.get_car_mut(instruction) = Object::Number(Instruction::Halt as u64);
+        // TODO Do we need these?
+        *self.get_cdr_mut(instruction) = ZERO;
+        *self.get_tag_mut(instruction) = PAIR_TAG;
     }
 
     pub fn run(&mut self) -> Result<(), Error> {
@@ -184,8 +188,7 @@ impl<'a> Vm<'a> {
                     let x = self.pop();
 
                     let rib = if !self.get_cdr(self.program_counter).is_rib() {
-                        let cdr_obj = self.get_cdr(self.program_counter);
-                        self.get_list_tail(self.stack, cdr_obj)
+                        self.get_list_tail(self.stack, self.get_cdr(self.program_counter))
                     } else {
                         self.get_cdr(self.program_counter)
                     };
@@ -195,8 +198,7 @@ impl<'a> Vm<'a> {
                     self.advance_program_counter();
                 }
                 Instruction::GET => {
-                    let proc_obj = self.get_procedure();
-                    self.push(proc_obj, PAIR_TAG);
+                    self.push(self.get_procedure(), PAIR_TAG);
                     self.advance_program_counter();
                 }
                 Instruction::CONSTANT => {
@@ -276,6 +278,16 @@ impl<'a> Vm<'a> {
         )
     }
 
+    fn get_rib_mut(&mut self, index: Object) -> RibMut<'_> {
+        let index = index.to_raw() as usize;
+
+        RibMut::new(
+            (&mut self.heap[index..index + rib::FIELD_COUNT])
+                .try_into()
+                .unwrap(),
+        )
+    }
+
     fn get_car(&self, index: Object) -> Object {
         self.get_rib(index).car()
     }
@@ -286,6 +298,18 @@ impl<'a> Vm<'a> {
 
     fn get_tag(&self, index: Object) -> Object {
         self.get_rib(index).tag()
+    }
+
+    fn get_car_mut(&mut self, index: Object) -> &mut Object {
+        self.get_rib_mut(index).car_mut()
+    }
+
+    fn get_cdr_mut(&mut self, index: Object) -> &mut Object {
+        self.get_rib_mut(index).cdr_mut()
+    }
+
+    fn get_tag_mut(&mut self, index: Object) -> &mut Object {
+        self.get_rib_mut(index).tag_mut()
     }
 
     fn get_true(&self) -> Object {
@@ -384,7 +408,8 @@ impl<'a> Vm<'a> {
                 let x = self.get_car(self.heap[self.get_tos_index()]);
                 let y = self.get_cdr(self.stack);
 
-                self.heap[self.get_tos_index()] = self.allocate_rib(x, y, CLOSURE_TAG);
+                let index = self.get_tos_index();
+                self.heap[index] = self.allocate_rib(x, y, CLOSURE_TAG);
             }
             Primitive::IsRib => {
                 let x = self.pop();
@@ -488,12 +513,13 @@ impl<'a> Vm<'a> {
 
     // Input decoding
 
-    fn decode_symbol_table(&mut self) {
+    fn decode_symbols(&mut self) {
         // Initialize non-printable symbols.
         for _ in 0..self.read_integer(0) {
             self.initialize_symbol(self.get_nil());
         }
 
+        // Symbol names are encoded in a reversed order.
         let mut name = self.get_nil();
 
         loop {
@@ -521,8 +547,6 @@ impl<'a> Vm<'a> {
     }
 
     fn decode_codes(&mut self) {
-        let weights = [20, 30, 0, 10, 11, 4];
-
         let mut n;
         let mut d;
         let mut op;
@@ -534,7 +558,7 @@ impl<'a> Vm<'a> {
 
             while n.to_raw() > {
                 op += 1;
-                d = weights[op as usize];
+                d = INSTRUCTION_WEIGHTS[op as usize];
                 d + 2
             } {
                 n = Object::Number(n.to_raw() - d - 3);
@@ -583,7 +607,8 @@ impl<'a> Vm<'a> {
             // TODO Review this.
             let instruction = self.allocate_rib(Object::Number(op as u64), n, ZERO);
             self.heap[get_tag_index(instruction)] = self.heap[self.get_tos_index()];
-            self.heap[self.get_tos_index()] = instruction;
+            let index = self.get_tos_index();
+            self.heap[index] = instruction;
         }
 
         self.program_counter = self.get_tag(self.get_car(n));
@@ -614,5 +639,19 @@ impl<'a> Vm<'a> {
         } else {
             self.read_integer(n + x - 46)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn define_global() {
+        // (define x 42)
+        // spell-checker: disable-next-line
+        Vm::new(b"#di,!tes-1dleif,1gra,,,,bir;)lk>m?mki#!):nlkl!':nlkm!(:nlku{")
+            .run()
+            .unwrap();
     }
 }
