@@ -528,6 +528,7 @@ impl<'a> Vm<'a> {
         let len = self.get_list_length(name);
         let list = self.allocate_rib(name, len, STRING_TAG);
         let symbol = self.allocate_rib(self.r#false, list, SYMBOL_TAG);
+
         self.symbol_table = self.allocate_rib(symbol, self.symbol_table, PAIR_TAG);
     }
 
