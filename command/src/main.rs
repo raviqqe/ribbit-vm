@@ -1,10 +1,16 @@
-use std::process::exit;
+use std::{env::args, fs::read_to_string, process::exit};
 use vm::{Error, Vm};
 
-const INPUT: &[u8] = b");'u?>vD?>vRD?>vRA?>vRA?>vR:?>vR=!(:lkm!':lkv6y";
-
 fn main() {
-    if let Err(error) = Vm::new(INPUT).run() {
+    let input = match read_to_string(args().nth(1).expect("command line argument")) {
+        Ok(input) => input,
+        Err(error) => {
+            eprintln!("{}", error);
+            return;
+        }
+    };
+
+    if let Err(error) = Vm::new(input.as_bytes()).run() {
         exit(match error {
             Error::IllegalInstruction | Error::IllegalPrimitive => 6,
         })
