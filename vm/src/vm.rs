@@ -154,8 +154,7 @@ impl<'a> Vm<'a> {
 
                         self.advance_program_counter();
                     } else {
-                        let code_object = self.get_code();
-                        let argument_count = self.get_car(code_object);
+                        let argument_count = self.get_car(self.get_code());
                         *self.get_car_mut(self.program_counter) = self.get_code();
 
                         let procedure = self.get_procedure();
