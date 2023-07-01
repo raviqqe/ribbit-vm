@@ -498,7 +498,7 @@ impl<'a> Vm<'a> {
     // Decoding
 
     fn decode_symbol_table(&mut self) {
-        let mut count = self.get_input_int(0);
+        let mut count = self.get_input_integer(0);
 
         while count > 0 {
             count -= 1;
@@ -564,10 +564,10 @@ impl<'a> Vm<'a> {
 
                 if n.to_raw() >= d {
                     n = if n.to_raw() == d {
-                        Object::Number(self.get_input_int(0) as u64)
+                        Object::Number(self.get_input_integer(0) as u64)
                     } else {
-                        let int = self.get_input_int((n.to_raw() - d - 1) as i64);
-                        self.get_symbol_ref(Object::Number(int as u64))
+                        let integer = self.get_input_integer((n.to_raw() - d - 1) as i64);
+                        self.get_symbol_ref(Object::Number(integer as u64))
                     }
                 } else {
                     n = if op < 3 { self.get_symbol_ref(n) } else { n }
@@ -616,14 +616,14 @@ impl<'a> Vm<'a> {
         }
     }
 
-    fn get_input_int(&mut self, number: i64) -> i64 {
+    fn get_input_integer(&mut self, number: i64) -> i64 {
         let x = self.get_input_code();
         let n = number * 46;
 
         if x < 46 {
             n + x
         } else {
-            self.get_input_int(n + x - 46)
+            self.get_input_integer(n + x - 46)
         }
     }
 }
