@@ -4,3 +4,7 @@
 [![License](https://img.shields.io/github/license/raviqqe/ribbit-vm.svg?style=flat-square)](LICENSE)
 
 Fork of Rust implementation of [Ribbit](https://github.com/udem-dlteam/ribbit).
+
+## License
+
+[BSD 3-clause](LICENSE)
