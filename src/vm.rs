@@ -34,19 +34,21 @@ fn exit(code: Option<ExitCode>) -> ! {
     process::exit(code.map(|code| code as i32).unwrap_or(0))
 }
 
-fn get_car_index(index: Object) -> usize {
+fn get_rib_index(index: Object, field: usize) -> usize {
     // TODO Check this conversion
-    index.to_raw().try_into().unwrap()
+    (index.to_raw() + field as u64).try_into().unwrap()
+}
+
+fn get_car_index(index: Object) -> usize {
+    get_rib_index(index, 0)
 }
 
 fn get_cdr_index(index: Object) -> usize {
-    // TODO Check this conversion
-    (&index.to_raw() + 1).try_into().unwrap()
+    get_rib_index(index, 1)
 }
 
 fn get_tag_index(index: Object) -> usize {
-    // TODO Check this conversion
-    (&index.to_raw() + 2).try_into().unwrap()
+    get_rib_index(index, 2)
 }
 
 pub struct Vm<'a> {
