@@ -495,7 +495,7 @@ impl<'a> Vm<'a> {
         todo!()
     }
 
-    // Decoding
+    // Input decoding
 
     fn decode_symbol_table(&mut self) {
         for _ in 0..self.read_integer(0) {
