@@ -610,7 +610,7 @@ impl<'a> Vm<'a> {
     }
 
     fn get_input_code(&mut self) -> i64 {
-        let x = i64::from(self.get_input_byte()) - 35;
+        let x = self.get_input_byte() as i64 - 35;
 
         if x < 0 {
             57
