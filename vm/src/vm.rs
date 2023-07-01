@@ -648,6 +648,7 @@ mod tests {
     #[test]
     fn define_global() {
         // (define x 42)
+        // spell-checker: disable-next-line
         Vm::new(b"#di,!tes-1dleif,1gra,,,,bir;)lk>m?mki#!):nlkl!':nlkm!(:nlku{")
             .run()
             .unwrap();
