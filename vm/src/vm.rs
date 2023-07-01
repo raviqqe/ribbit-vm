@@ -97,6 +97,8 @@ impl<'a> Vm<'a> {
         // Primitive 0
         let rib = self.allocate_rib(ZERO, self.symbol_table, CLOSURE_TAG);
 
+        // The symbol initialization order is important as they are listed in a symbol
+        // table in encoded bytecodes.
         self.initialize_global(rib);
         self.initialize_global(self.r#false);
         self.initialize_global(self.get_true());
@@ -275,7 +277,7 @@ impl<'a> Vm<'a> {
         )
     }
 
-    fn get_rib_mut<'b>(&'b mut self, index: Object) -> RibMut<'b> {
+    fn get_rib_mut(&mut self, index: Object) -> RibMut<'_> {
         let index = index.to_raw() as usize;
 
         RibMut::new(
