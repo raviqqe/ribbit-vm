@@ -3,7 +3,7 @@ use crate::{
     instruction::Instruction,
     object::Object,
     primitive::Primitive,
-    rib::{self, Rib},
+    rib::{self, Rib, RibMut},
 };
 use std::{
     convert::TryInto,
@@ -91,7 +91,7 @@ impl<'a> Vm<'a> {
         let nil = self.allocate_rib(ZERO, ZERO, SINGLETON_TAG);
         self.r#false = self.allocate_rib(r#true, nil, SINGLETON_TAG);
 
-        self.decode_symbol_table();
+        self.decode_symbols();
         self.decode_codes();
 
         // Primitive 0
@@ -106,7 +106,7 @@ impl<'a> Vm<'a> {
     }
 
     fn initialize_global(&mut self, object: Object) {
-        self.heap[get_car_index(Object::Number(get_car_index(self.symbol_table) as u64))] = object;
+        *self.get_car_mut(self.get_car(self.symbol_table)) = object;
         self.symbol_table = self.get_cdr(self.symbol_table);
     }
 
@@ -275,6 +275,16 @@ impl<'a> Vm<'a> {
         )
     }
 
+    fn get_rib_mut<'b>(&'b mut self, index: Object) -> RibMut<'b> {
+        let index = index.to_raw() as usize;
+
+        RibMut::new(
+            (&mut self.heap[index..index + rib::FIELD_COUNT])
+                .try_into()
+                .unwrap(),
+        )
+    }
+
     fn get_car(&self, index: Object) -> Object {
         self.get_rib(index).car()
     }
@@ -285,6 +295,18 @@ impl<'a> Vm<'a> {
 
     fn get_tag(&self, index: Object) -> Object {
         self.get_rib(index).tag()
+    }
+
+    fn get_car_mut(&mut self, index: Object) -> &mut Object {
+        self.get_rib_mut(index).car_mut()
+    }
+
+    fn get_cdr_mut(&mut self, index: Object) -> &mut Object {
+        self.get_rib_mut(index).cdr_mut()
+    }
+
+    fn get_tag_mut(&mut self, index: Object) -> &mut Object {
+        self.get_rib_mut(index).tag_mut()
     }
 
     fn get_true(&self) -> Object {
@@ -487,7 +509,7 @@ impl<'a> Vm<'a> {
 
     // Input decoding
 
-    fn decode_symbol_table(&mut self) {
+    fn decode_symbols(&mut self) {
         // Initialize non-printable symbols.
         for _ in 0..self.read_integer(0) {
             self.initialize_symbol(self.get_nil());
