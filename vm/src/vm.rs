@@ -148,8 +148,7 @@ impl<'a> Vm<'a> {
 
                         if jump {
                             self.program_counter = self.get_continuation();
-                            self.heap[get_cdr_index(self.stack)] =
-                                self.get_car(self.program_counter);
+                            *self.get_cdr_mut(self.stack) = self.get_car(self.program_counter);
                         }
 
                         self.advance_program_counter();
