@@ -2,6 +2,7 @@ use crate::object::Object;
 
 pub const FIELD_COUNT: usize = 3;
 
+#[derive(Clone, Copy, Debug)]
 pub struct Rib<'a> {
     fields: &'a [Object; FIELD_COUNT],
 }
@@ -24,6 +25,7 @@ impl<'a> Rib<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct RibMut<'a> {
     fields: &'a mut [Object; FIELD_COUNT],
 }
