@@ -34,6 +34,23 @@ fn exit(code: Option<ExitCode>) -> ! {
     process::exit(code.map(|code| code as i32).unwrap_or(0))
 }
 
+fn get_rib_index(index: Object, field: usize) -> usize {
+    // TODO Check this conversion
+    (index.to_raw() + field as u64).try_into().unwrap()
+}
+
+fn get_car_index(index: Object) -> usize {
+    get_rib_index(index, 0)
+}
+
+fn get_cdr_index(index: Object) -> usize {
+    get_rib_index(index, 1)
+}
+
+fn get_tag_index(index: Object) -> usize {
+    get_rib_index(index, 2)
+}
+
 pub struct Vm<'a> {
     // Roots
     stack: Object,
@@ -50,72 +67,6 @@ pub struct Vm<'a> {
     allocation_limit: usize,
     #[allow(dead_code)]
     scan: usize,
-}
-
-fn get_car_index(index: Object) -> usize {
-    // TODO Check this conversion
-    index.to_raw().try_into().unwrap()
-}
-
-fn get_cdr_index(index: Object) -> usize {
-    // TODO Check this conversion
-    (&index.to_raw() + 1).try_into().unwrap()
-}
-
-fn get_tag_index(index: Object) -> usize {
-    // TODO Check this conversion
-    (&index.to_raw() + 2).try_into().unwrap()
-}
-
-fn set_global(vm: &mut Vm, object: Object) {
-    let index = Object::Number(get_car_index(vm.symbol_table) as u64);
-    vm.heap[get_car_index(index)] = object;
-    vm.symbol_table = vm.get_cdr(vm.symbol_table);
-}
-
-fn setup_stack(vm: &mut Vm) {
-    vm.push(ZERO, PAIR_TAG);
-    vm.push(ZERO, PAIR_TAG);
-
-    let first = vm.get_cdr(vm.stack);
-    vm.heap[get_cdr_index(vm.stack)] = ZERO;
-    vm.heap[get_tag_index(vm.stack)] = first;
-
-    vm.heap[get_car_index(first)] = Object::Number(Instruction::Halt as u64);
-    vm.heap[get_cdr_index(first)] = ZERO;
-    vm.heap[get_tag_index(first)] = PAIR_TAG;
-}
-
-fn create_symbol(vm: &mut Vm, name: Object) -> Object {
-    let len = vm.get_list_length(name);
-    let list = allocate_rib(vm, name, len, STRING_TAG);
-    let symbol = allocate_rib(vm, vm.r#false, list, SYMBOL_TAG);
-    allocate_rib(vm, symbol, vm.symbol_table, PAIR_TAG)
-}
-
-fn allocate_rib(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
-    vm.push(car, cdr);
-    let stack = vm.get_cdr(vm.stack);
-    let allocated = vm.stack;
-
-    vm.heap[get_cdr_index(allocated)] = vm.heap[get_tag_index(allocated)];
-    vm.heap[get_tag_index(allocated)] = tag;
-
-    vm.stack = stack;
-
-    Object::Rib(allocated.to_raw())
-}
-
-fn allocate_rib2(vm: &mut Vm, car: Object, cdr: Object, tag: Object) -> Object {
-    vm.push(car, tag);
-    let stack = vm.get_cdr(vm.stack);
-    let allocated = vm.stack;
-
-    vm.heap[get_cdr_index(allocated)] = cdr;
-
-    vm.stack = stack;
-
-    Object::Rib(allocated.to_raw())
 }
 
 impl<'a> Vm<'a> {
@@ -141,24 +92,43 @@ impl<'a> Vm<'a> {
     }
 
     fn initialize(&mut self) {
-        let init_0 = allocate_rib(self, ZERO, ZERO, SINGLETON_TAG);
-        self.r#false = allocate_rib(self, init_0, init_0, SINGLETON_TAG);
+        let init_0 = self.allocate_rib(ZERO, ZERO, SINGLETON_TAG);
+        self.r#false = self.allocate_rib(init_0, init_0, SINGLETON_TAG);
 
         self.decode_symbol_table();
         self.decode_codes();
 
         let symbol_table = self.symbol_table;
-        let rib = allocate_rib(self, ZERO, symbol_table, CLOSURE_TAG);
+        let rib = self.allocate_rib(ZERO, symbol_table, CLOSURE_TAG);
         let r#false = self.r#false;
         let r#true = self.get_true();
         let nil = self.get_nil();
 
-        set_global(self, rib);
-        set_global(self, r#false);
-        set_global(self, r#true);
-        set_global(self, nil);
+        self.initialize_global(rib);
+        self.initialize_global(r#false);
+        self.initialize_global(r#true);
+        self.initialize_global(nil);
 
-        setup_stack(self);
+        self.initialize_stack();
+    }
+
+    fn initialize_stack(&mut self) {
+        self.push(ZERO, PAIR_TAG);
+        self.push(ZERO, PAIR_TAG);
+
+        let first = self.get_cdr(self.stack);
+        self.heap[get_cdr_index(self.stack)] = ZERO;
+        self.heap[get_tag_index(self.stack)] = first;
+
+        self.heap[get_car_index(first)] = Object::Number(Instruction::Halt as u64);
+        self.heap[get_cdr_index(first)] = ZERO;
+        self.heap[get_tag_index(first)] = PAIR_TAG;
+    }
+
+    fn initialize_global(&mut self, object: Object) {
+        let index = Object::Number(get_car_index(self.symbol_table) as u64);
+        self.heap[get_car_index(index)] = object;
+        self.symbol_table = self.get_cdr(self.symbol_table);
     }
 
     pub fn run(&mut self) {
@@ -193,11 +163,11 @@ impl<'a> Vm<'a> {
                         self.heap[get_car_index(self.program_counter)] = self.get_code();
 
                         let procedure = self.get_procedure();
-                        let mut s2 = allocate_rib(self, ZERO, procedure, PAIR_TAG);
+                        let mut s2 = self.allocate_rib(ZERO, procedure, PAIR_TAG);
 
                         for _ in 0..argument_count.to_raw() {
                             let pop_obj = self.pop();
-                            s2 = allocate_rib(self, pop_obj, s2, PAIR_TAG);
+                            s2 = self.allocate_rib(pop_obj, s2, PAIR_TAG);
                         }
 
                         let c2 = self.get_list_tail(s2, argument_count);
@@ -279,6 +249,31 @@ impl<'a> Vm<'a> {
         if self.allocation_index == self.allocation_limit {
             self.collect_garbages();
         }
+    }
+
+    fn allocate_rib(&mut self, car: Object, cdr: Object, tag: Object) -> Object {
+        self.push(car, cdr);
+        let stack = self.get_cdr(self.stack);
+        let allocated = self.stack;
+
+        self.heap[get_cdr_index(allocated)] = self.heap[get_tag_index(allocated)];
+        self.heap[get_tag_index(allocated)] = tag;
+
+        self.stack = stack;
+
+        Object::Rib(allocated.to_raw())
+    }
+
+    fn allocate_rib2(&mut self, car: Object, cdr: Object, tag: Object) -> Object {
+        self.push(car, tag);
+        let stack = self.get_cdr(self.stack);
+        let allocated = self.stack;
+
+        self.heap[get_cdr_index(allocated)] = cdr;
+
+        self.stack = stack;
+
+        Object::Rib(allocated.to_raw())
     }
 
     fn get_tos_index(&self) -> usize {
@@ -377,7 +372,7 @@ impl<'a> Vm<'a> {
     fn operate_primitive(&mut self, primitive: Primitive) {
         match primitive {
             Primitive::Rib => {
-                let rib = allocate_rib(self, ZERO, ZERO, ZERO);
+                let rib = self.allocate_rib(ZERO, ZERO, ZERO);
                 self.heap[get_car_index(rib)] = self.pop();
                 self.heap[get_cdr_index(rib)] = self.pop();
                 self.heap[get_tag_index(rib)] = self.pop();
@@ -400,7 +395,7 @@ impl<'a> Vm<'a> {
                 let x = self.get_car(Object::Number(self.get_tos_index() as u64));
                 let y = self.get_cdr(self.stack);
 
-                self.heap[self.get_tos_index()] = allocate_rib(self, x, y, CLOSURE_TAG);
+                self.heap[self.get_tos_index()] = self.allocate_rib(x, y, CLOSURE_TAG);
             }
             Primitive::IsRib => {
                 let x = self.pop();
@@ -514,7 +509,7 @@ impl<'a> Vm<'a> {
         while count > 0 {
             count -= 1;
             let nil = self.get_nil();
-            self.symbol_table = create_symbol(self, nil);
+            self.symbol_table = self.create_symbol(nil);
         }
 
         let mut name = self.get_nil();
@@ -523,7 +518,7 @@ impl<'a> Vm<'a> {
             let c = self.get_input_byte();
 
             if c == 44 {
-                self.symbol_table = create_symbol(self, name);
+                self.symbol_table = self.create_symbol(name);
                 name = self.get_nil();
                 continue;
             }
@@ -532,10 +527,17 @@ impl<'a> Vm<'a> {
                 break;
             }
 
-            name = allocate_rib(self, Object::Number(c as u64), name, PAIR_TAG);
+            name = self.allocate_rib(Object::Number(c as u64), name, PAIR_TAG);
         }
 
-        self.symbol_table = create_symbol(self, name);
+        self.symbol_table = self.create_symbol(name);
+    }
+
+    fn create_symbol(&mut self, name: Object) -> Object {
+        let len = self.get_list_length(name);
+        let list = self.allocate_rib(name, len, STRING_TAG);
+        let symbol = self.allocate_rib(self.r#false, list, SYMBOL_TAG);
+        self.allocate_rib(symbol, self.symbol_table, PAIR_TAG)
     }
 
     fn decode_codes(&mut self) {
@@ -582,9 +584,9 @@ impl<'a> Vm<'a> {
 
                 if op > 4 {
                     let obj = self.pop();
-                    let rib2 = allocate_rib2(self, n, ZERO, obj);
+                    let rib2 = self.allocate_rib2(n, ZERO, obj);
                     let nil = self.get_nil();
-                    n = allocate_rib(self, rib2, nil, CLOSURE_TAG);
+                    n = self.allocate_rib(rib2, nil, CLOSURE_TAG);
 
                     if self.stack.to_raw() == ZERO.to_raw() {
                         break;
@@ -596,7 +598,7 @@ impl<'a> Vm<'a> {
                 }
             }
 
-            let c = allocate_rib(self, Object::Number(op as u64), n, ZERO);
+            let c = self.allocate_rib(Object::Number(op as u64), n, ZERO);
             self.heap[get_cdr_index(c)] = self.heap[self.get_tos_index()];
             self.heap[self.get_tos_index()] = c;
         }
