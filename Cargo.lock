@@ -47,11 +47,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "rvm"
+name = "ribbit-vm"
 version = "0.1.0"
 dependencies = [
  "num-derive",
  "num-traits",
+]
+
+[[package]]
+name = "rvm"
+version = "0.1.0"
+dependencies = [
+ "ribbit-vm",
 ]
 
 [[package]]

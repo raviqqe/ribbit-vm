@@ -1,3 +1,6 @@
+use num_derive::FromPrimitive;
+
+#[derive(Clone, Copy, Debug, FromPrimitive)]
 pub enum Instruction {
     Apply,
     Set,

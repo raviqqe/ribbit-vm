@@ -127,10 +127,8 @@ impl<'a> Vm<'a> {
     pub fn run(&mut self) -> Result<(), Error> {
         loop {
             let instruction = self.get_car(self.program_counter);
-            println!("{}", instruction.to_raw() as i64);
-            self.advance_program_counter();
-            let instruction = self.get_car(self.program_counter);
-            println!("{}", instruction.to_raw() as i64);
+            #[cfg(feature = "trace")]
+            println!("instruction: {}", instruction.to_raw());
 
             match instruction.to_raw() {
                 Instruction::HALT => return Ok(()),
@@ -229,16 +227,10 @@ impl<'a> Vm<'a> {
     }
 
     fn push(&mut self, car: Object, tag: Object) {
-        self.heap[self.allocation_index] = car;
-        self.allocation_index += 1;
-
-        self.heap[self.allocation_index] = self.stack;
-        self.allocation_index += 1;
-
-        self.heap[self.allocation_index] = tag;
-        self.allocation_index += 1;
-
-        self.stack = Object::Rib((self.allocation_index - rib::FIELD_COUNT) as u64);
+        self.heap[self.allocation_index..self.allocation_index + rib::FIELD_COUNT]
+            .copy_from_slice(&[car, self.stack, tag]);
+        self.stack = Object::Rib(self.allocation_index as u64);
+        self.allocation_index += rib::FIELD_COUNT;
 
         if self.allocation_index == self.allocation_limit {
             self.collect_garbages();
@@ -304,7 +296,7 @@ impl<'a> Vm<'a> {
         self.get_cdr(self.r#false)
     }
 
-    fn get_boolean(&mut self, value: bool) -> Object {
+    fn get_boolean(&self, value: bool) -> Object {
         if value {
             self.get_true()
         } else {
@@ -364,6 +356,9 @@ impl<'a> Vm<'a> {
     }
 
     fn operate_primitive(&mut self, primitive: Primitive) {
+        #[cfg(feature = "trace")]
+        println!("primitive: {}", primitive as usize);
+
         match primitive {
             Primitive::Rib => {
                 let rib = self.allocate_rib(ZERO, ZERO, ZERO);
@@ -378,7 +373,6 @@ impl<'a> Vm<'a> {
             }
             Primitive::Pop => {
                 self.pop();
-                // TODO Check what is the meaning of true?
             }
             Primitive::Skip => {
                 let x = self.pop();
@@ -386,30 +380,27 @@ impl<'a> Vm<'a> {
                 self.push(x, PAIR_TAG);
             }
             Primitive::Close => {
-                let x = self.get_car(Object::Number(self.get_tos_index() as u64));
+                // TODO Review this.
+                let x = self.get_car(self.heap[self.get_tos_index()]);
                 let y = self.get_cdr(self.stack);
 
                 self.heap[self.get_tos_index()] = self.allocate_rib(x, y, CLOSURE_TAG);
             }
             Primitive::IsRib => {
                 let x = self.pop();
-                let condition = self.get_boolean(x.is_rib());
-                self.push(condition, PAIR_TAG);
+                self.push(self.get_boolean(x.is_rib()), PAIR_TAG);
             }
             Primitive::Field0 => {
                 let x = self.pop();
-                let car = self.get_car(x);
-                self.push(car, PAIR_TAG);
+                self.push(self.get_car(x), PAIR_TAG);
             }
             Primitive::Field1 => {
                 let x = self.pop();
-                let cdr = self.get_cdr(x);
-                self.push(cdr, PAIR_TAG);
+                self.push(self.get_cdr(x), PAIR_TAG);
             }
             Primitive::Field2 => {
                 let x = self.pop();
-                let tag = self.get_tag(x);
-                self.push(tag, PAIR_TAG)
+                self.push(self.get_tag(x), PAIR_TAG)
             }
             Primitive::SetField0 => {
                 let x = self.pop();
@@ -448,7 +439,7 @@ impl<'a> Vm<'a> {
                 self.operate_binary(Div::div);
             }
             Primitive::GetC => {
-                let mut buffer = vec![0u8; 1];
+                let mut buffer = [0u8];
 
                 // TODO Handle errors.
                 stdin().read_exact(&mut buffer).unwrap();
@@ -495,57 +486,49 @@ impl<'a> Vm<'a> {
         todo!()
     }
 
-    // Decoding
+    // Input decoding
 
     fn decode_symbol_table(&mut self) {
-        let mut count = self.get_input_int(0);
-
-        while count > 0 {
-            count -= 1;
-            let nil = self.get_nil();
-            self.symbol_table = self.create_symbol(nil);
+        // Initialize non-printable symbols.
+        for _ in 0..self.read_integer(0) {
+            self.initialize_symbol(self.get_nil());
         }
 
         let mut name = self.get_nil();
 
         loop {
-            let c = self.get_input_byte();
-
-            if c == 44 {
-                self.symbol_table = self.create_symbol(name);
-                name = self.get_nil();
-                continue;
+            match self.read_byte() {
+                b',' => {
+                    self.initialize_symbol(name);
+                    name = self.get_nil();
+                }
+                b';' => break,
+                character => {
+                    name = self.allocate_rib(Object::Number(character as u64), name, PAIR_TAG);
+                }
             }
-
-            if c == 59 {
-                break;
-            }
-
-            name = self.allocate_rib(Object::Number(c as u64), name, PAIR_TAG);
         }
 
-        self.symbol_table = self.create_symbol(name);
+        self.initialize_symbol(name);
     }
 
-    fn create_symbol(&mut self, name: Object) -> Object {
+    fn initialize_symbol(&mut self, name: Object) {
         let len = self.get_list_length(name);
         let list = self.allocate_rib(name, len, STRING_TAG);
         let symbol = self.allocate_rib(self.r#false, list, SYMBOL_TAG);
-        self.allocate_rib(symbol, self.symbol_table, PAIR_TAG)
+
+        self.symbol_table = self.allocate_rib(symbol, self.symbol_table, PAIR_TAG);
     }
 
     fn decode_codes(&mut self) {
         let weights = [20, 30, 0, 10, 11, 4];
 
-        #[allow(unused_assignments)]
-        let mut n = ZERO;
-        #[allow(unused_assignments)]
-        let mut d = 0;
-        #[allow(unused_assignments)]
-        let mut op: i64 = -1;
+        let mut n;
+        let mut d;
+        let mut op;
 
         loop {
-            let x = self.get_input_code();
+            let x = self.read_code();
             n = Object::Number(x as u64);
             op = -1;
 
@@ -565,26 +548,28 @@ impl<'a> Vm<'a> {
                     self.push(ZERO, ZERO);
                 }
 
-                if n.to_raw() >= d {
-                    n = if n.to_raw() == d {
-                        Object::Number(self.get_input_int(0) as u64)
-                    } else {
-                        let int = self.get_input_int((n.to_raw() - d - 1) as i64);
-                        self.get_symbol_ref(Object::Number(int as u64))
-                    }
+                n = if n.to_raw() == d {
+                    Object::Number(self.read_integer(0) as u64)
+                } else if n.to_raw() > d {
+                    let integer = self.read_integer((n.to_raw() - d - 1) as i64);
+                    self.get_symbol_ref(Object::Number(integer as u64))
+                } else if op < 3 {
+                    self.get_symbol_ref(n)
                 } else {
-                    n = if op < 3 { self.get_symbol_ref(n) } else { n }
-                }
+                    n
+                };
 
                 if op > 4 {
-                    let obj = self.pop();
-                    let rib2 = self.allocate_rib2(n, ZERO, obj);
-                    let nil = self.get_nil();
-                    n = self.allocate_rib(rib2, nil, CLOSURE_TAG);
+                    let object = self.pop();
+                    let rib2 = self.allocate_rib2(n, ZERO, object);
+                    n = self.allocate_rib(rib2, self.get_nil(), CLOSURE_TAG);
 
                     if self.stack.to_raw() == ZERO.to_raw() {
                         break;
                     }
+
+                    // TODO Review this.
+                    op = Instruction::CONSTANT as i64;
                 } else if op > 0 {
                     op -= 1;
                 } else {
@@ -592,25 +577,26 @@ impl<'a> Vm<'a> {
                 }
             }
 
-            let c = self.allocate_rib(Object::Number(op as u64), n, ZERO);
-            self.heap[get_cdr_index(c)] = self.heap[self.get_tos_index()];
-            self.heap[self.get_tos_index()] = c;
+            #[cfg(feature = "trace")]
+            println!("decode: {} {}", op, x);
+
+            // TODO Review this.
+            let instruction = self.allocate_rib(Object::Number(op as u64), n, ZERO);
+            self.heap[get_tag_index(instruction)] = self.heap[self.get_tos_index()];
+            self.heap[self.get_tos_index()] = instruction;
         }
 
-        let car = self.get_car(n);
-        let tag = self.get_tag(car);
-
-        self.program_counter = self.get_tag(tag);
+        self.program_counter = self.get_tag(self.get_car(n));
     }
 
-    fn get_input_byte(&mut self) -> u8 {
+    fn read_byte(&mut self) -> u8 {
         let byte = self.input[self.position];
         self.position += 1;
         byte
     }
 
-    fn get_input_code(&mut self) -> i64 {
-        let x = i64::from(self.get_input_byte()) - 35;
+    fn read_code(&mut self) -> i64 {
+        let x = self.read_byte() as i64 - 35;
 
         if x < 0 {
             57
@@ -619,14 +605,14 @@ impl<'a> Vm<'a> {
         }
     }
 
-    fn get_input_int(&mut self, number: i64) -> i64 {
-        let x = self.get_input_code();
-        let n = number * 46;
+    fn read_integer(&mut self, mut n: i64) -> i64 {
+        let x = self.read_code();
+        n *= 46;
 
         if x < 46 {
             n + x
         } else {
-            self.get_input_int(n + x - 46)
+            self.read_integer(n + x - 46)
         }
     }
 }
