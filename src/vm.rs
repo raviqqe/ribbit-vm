@@ -69,19 +69,6 @@ pub struct Vm<'a> {
     scan: usize,
 }
 
-fn set_global(vm: &mut Vm, object: Object) {
-    let index = Object::Number(get_car_index(vm.symbol_table) as u64);
-    vm.heap[get_car_index(index)] = object;
-    vm.symbol_table = vm.get_cdr(vm.symbol_table);
-}
-
-fn create_symbol(vm: &mut Vm, name: Object) -> Object {
-    let len = vm.get_list_length(name);
-    let list = vm.allocate_rib(name, len, STRING_TAG);
-    let symbol = vm.allocate_rib(vm.r#false, list, SYMBOL_TAG);
-    vm.allocate_rib(symbol, vm.symbol_table, PAIR_TAG)
-}
-
 impl<'a> Vm<'a> {
     pub fn new(input: &'a [u8]) -> Self {
         let mut vm = Self {
@@ -117,10 +104,10 @@ impl<'a> Vm<'a> {
         let r#true = self.get_true();
         let nil = self.get_nil();
 
-        set_global(self, rib);
-        set_global(self, r#false);
-        set_global(self, r#true);
-        set_global(self, nil);
+        self.initialize_global(rib);
+        self.initialize_global(r#false);
+        self.initialize_global(r#true);
+        self.initialize_global(nil);
 
         self.initialize_stack();
     }
@@ -136,6 +123,12 @@ impl<'a> Vm<'a> {
         self.heap[get_car_index(first)] = Object::Number(Instruction::Halt as u64);
         self.heap[get_cdr_index(first)] = ZERO;
         self.heap[get_tag_index(first)] = PAIR_TAG;
+    }
+
+    fn initialize_global(&mut self, object: Object) {
+        let index = Object::Number(get_car_index(self.symbol_table) as u64);
+        self.heap[get_car_index(index)] = object;
+        self.symbol_table = self.get_cdr(self.symbol_table);
     }
 
     pub fn run(&mut self) {
@@ -516,7 +509,7 @@ impl<'a> Vm<'a> {
         while count > 0 {
             count -= 1;
             let nil = self.get_nil();
-            self.symbol_table = create_symbol(self, nil);
+            self.symbol_table = self.create_symbol(nil);
         }
 
         let mut name = self.get_nil();
@@ -525,7 +518,7 @@ impl<'a> Vm<'a> {
             let c = self.get_input_byte();
 
             if c == 44 {
-                self.symbol_table = create_symbol(self, name);
+                self.symbol_table = self.create_symbol(name);
                 name = self.get_nil();
                 continue;
             }
@@ -537,7 +530,14 @@ impl<'a> Vm<'a> {
             name = self.allocate_rib(Object::Number(c as u64), name, PAIR_TAG);
         }
 
-        self.symbol_table = create_symbol(self, name);
+        self.symbol_table = self.create_symbol(name);
+    }
+
+    fn create_symbol(&mut self, name: Object) -> Object {
+        let len = self.get_list_length(name);
+        let list = self.allocate_rib(name, len, STRING_TAG);
+        let symbol = self.allocate_rib(self.r#false, list, SYMBOL_TAG);
+        self.allocate_rib(symbol, self.symbol_table, PAIR_TAG)
     }
 
     fn decode_codes(&mut self) {
