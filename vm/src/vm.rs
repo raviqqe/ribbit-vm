@@ -5,7 +5,6 @@ use crate::{
     primitive::Primitive,
     rib::{self, Rib},
 };
-use num_traits::FromPrimitive;
 use std::{
     convert::TryInto,
     io::{stdin, Read},
@@ -128,7 +127,8 @@ impl<'a> Vm<'a> {
     pub fn run(&mut self) -> Result<(), Error> {
         loop {
             let instruction = self.get_car(self.program_counter);
-            println!("{:?}", Instruction::from_u64(instruction.to_raw()).unwrap());
+            #[cfg(feature= "trace")]
+            println!("instruction: {}", instruction.to_raw());
 
             match instruction.to_raw() {
                 Instruction::HALT => return Ok(()),
@@ -577,6 +577,9 @@ impl<'a> Vm<'a> {
                     op = 0;
                 }
             }
+
+            #[cfg(feature= "trace")]
+            println!("decode: {} {}", op, x);
 
             // TODO Review this.
             let instruction = self.allocate_rib(Object::Number(op as u64), n, ZERO);
