@@ -19,6 +19,8 @@ const HEAP_MIDDLE: usize = HEAP_SIZE / 2;
 #[allow(dead_code)]
 const HEAP_TOP: usize = HEAP_SIZE;
 
+const INSTRUCTION_WEIGHTS: [u64; 6] = [20, 30, 0, 10, 11, 4];
+
 const ZERO: Object = Object::Number(0);
 
 const PAIR_TAG: Object = ZERO;
@@ -521,8 +523,6 @@ impl<'a> Vm<'a> {
     }
 
     fn decode_codes(&mut self) {
-        let weights = [20, 30, 0, 10, 11, 4];
-
         let mut n;
         let mut d;
         let mut op;
@@ -534,7 +534,7 @@ impl<'a> Vm<'a> {
 
             while n.to_raw() > {
                 op += 1;
-                d = weights[op as usize];
+                d = INSTRUCTION_WEIGHTS[op as usize];
                 d + 2
             } {
                 n = Object::Number(n.to_raw() - d - 3);
