@@ -106,9 +106,7 @@ impl<'a> Vm<'a> {
     }
 
     fn initialize_global(&mut self, object: Object) {
-        let index = Object::Number(get_car_index(self.symbol_table) as u64);
-
-        self.heap[get_car_index(index)] = object;
+        self.heap[get_car_index(Object::Number(get_car_index(self.symbol_table) as u64))] = object;
         self.symbol_table = self.get_cdr(self.symbol_table);
     }
 
