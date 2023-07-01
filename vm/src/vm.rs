@@ -537,12 +537,9 @@ impl<'a> Vm<'a> {
     fn decode_codes(&mut self) {
         let weights = [20, 30, 0, 10, 11, 4];
 
-        #[allow(unused_assignments)]
-        let mut n = ZERO;
-        #[allow(unused_assignments)]
-        let mut d = 0;
-        #[allow(unused_assignments)]
-        let mut op: i64 = -1;
+        let mut n;
+        let mut d;
+        let mut op;
 
         loop {
             let x = self.get_input_code();
