@@ -229,16 +229,10 @@ impl<'a> Vm<'a> {
     }
 
     fn push(&mut self, car: Object, tag: Object) {
-        self.heap[self.allocation_index] = car;
-        self.allocation_index += 1;
-
-        self.heap[self.allocation_index] = self.stack;
-        self.allocation_index += 1;
-
-        self.heap[self.allocation_index] = tag;
-        self.allocation_index += 1;
-
-        self.stack = Object::Rib((self.allocation_index - rib::FIELD_COUNT) as u64);
+        self.heap[self.allocation_index..self.allocation_index + rib::FIELD_COUNT]
+            .copy_from_slice(&[car, self.stack, tag]);
+        self.stack = Object::Rib(self.allocation_index as u64);
+        self.allocation_index += rib::FIELD_COUNT;
 
         if self.allocation_index == self.allocation_limit {
             self.collect_garbages();
@@ -556,13 +550,11 @@ impl<'a> Vm<'a> {
                     self.push(ZERO, ZERO);
                 }
 
-                n = if n.to_raw() >= d {
-                    if n.to_raw() == d {
-                        Object::Number(self.read_integer(0) as u64)
-                    } else {
-                        let integer = self.read_integer((n.to_raw() - d - 1) as i64);
-                        self.get_symbol_ref(Object::Number(integer as u64))
-                    }
+                n = if n.to_raw() == d {
+                    Object::Number(self.read_integer(0) as u64)
+                } else if n.to_raw() > d {
+                    let integer = self.read_integer((n.to_raw() - d - 1) as i64);
+                    self.get_symbol_ref(Object::Number(integer as u64))
                 } else if op < 3 {
                     self.get_symbol_ref(n)
                 } else {
@@ -570,8 +562,8 @@ impl<'a> Vm<'a> {
                 };
 
                 if op > 4 {
-                    let obj = self.pop();
-                    let rib2 = self.allocate_rib2(n, ZERO, obj);
+                    let object = self.pop();
+                    let rib2 = self.allocate_rib2(n, ZERO, object);
                     let nil = self.get_nil();
                     n = self.allocate_rib(rib2, nil, CLOSURE_TAG);
 
