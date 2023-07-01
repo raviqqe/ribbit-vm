@@ -498,7 +498,7 @@ impl<'a> Vm<'a> {
     // Decoding
 
     fn decode_symbol_table(&mut self) {
-        let mut count = self.get_input_integer(0);
+        let mut count = self.read_integer(0);
 
         while count > 0 {
             count -= 1;
@@ -509,7 +509,7 @@ impl<'a> Vm<'a> {
         let mut name = self.get_nil();
 
         loop {
-            let c = self.get_input_byte();
+            let c = self.read_byte();
 
             if c == 44 {
                 self.symbol_table = self.create_symbol(name);
@@ -542,7 +542,7 @@ impl<'a> Vm<'a> {
         let mut op;
 
         loop {
-            let x = self.get_input_code();
+            let x = self.read_code();
             n = Object::Number(x as u64);
             op = -1;
 
@@ -564,9 +564,9 @@ impl<'a> Vm<'a> {
 
                 n = if n.to_raw() >= d {
                     if n.to_raw() == d {
-                        Object::Number(self.get_input_integer(0) as u64)
+                        Object::Number(self.read_integer(0) as u64)
                     } else {
-                        let integer = self.get_input_integer((n.to_raw() - d - 1) as i64);
+                        let integer = self.read_integer((n.to_raw() - d - 1) as i64);
                         self.get_symbol_ref(Object::Number(integer as u64))
                     }
                 } else if op < 3 {
@@ -602,14 +602,14 @@ impl<'a> Vm<'a> {
         self.program_counter = self.get_tag(tag);
     }
 
-    fn get_input_byte(&mut self) -> u8 {
+    fn read_byte(&mut self) -> u8 {
         let byte = self.input[self.position];
         self.position += 1;
         byte
     }
 
-    fn get_input_code(&mut self) -> i64 {
-        let x = self.get_input_byte() as i64 - 35;
+    fn read_code(&mut self) -> i64 {
+        let x = self.read_byte() as i64 - 35;
 
         if x < 0 {
             57
@@ -618,14 +618,14 @@ impl<'a> Vm<'a> {
         }
     }
 
-    fn get_input_integer(&mut self, number: i64) -> i64 {
-        let x = self.get_input_code();
+    fn read_integer(&mut self, number: i64) -> i64 {
+        let x = self.read_code();
         let n = number * 46;
 
         if x < 46 {
             n + x
         } else {
-            self.get_input_integer(n + x - 46)
+            self.read_integer(n + x - 46)
         }
     }
 }
