@@ -73,19 +73,6 @@ fn set_global(vm: &mut Vm, object: Object) {
     vm.symbol_table = vm.get_cdr(vm.symbol_table);
 }
 
-fn setup_stack(vm: &mut Vm) {
-    vm.push(ZERO, PAIR_TAG);
-    vm.push(ZERO, PAIR_TAG);
-
-    let first = vm.get_cdr(vm.stack);
-    vm.heap[get_cdr_index(vm.stack)] = ZERO;
-    vm.heap[get_tag_index(vm.stack)] = first;
-
-    vm.heap[get_car_index(first)] = Object::Number(Instruction::Halt as u64);
-    vm.heap[get_cdr_index(first)] = ZERO;
-    vm.heap[get_tag_index(first)] = PAIR_TAG;
-}
-
 fn create_symbol(vm: &mut Vm, name: Object) -> Object {
     let len = vm.get_list_length(name);
     let list = vm.allocate_rib(name, len, STRING_TAG);
@@ -133,7 +120,20 @@ impl<'a> Vm<'a> {
         set_global(self, r#true);
         set_global(self, nil);
 
-        setup_stack(self);
+        self.initialize_stack();
+    }
+
+    fn initialize_stack(&mut self) {
+        self.push(ZERO, PAIR_TAG);
+        self.push(ZERO, PAIR_TAG);
+
+        let first = self.get_cdr(self.stack);
+        self.heap[get_cdr_index(self.stack)] = ZERO;
+        self.heap[get_tag_index(self.stack)] = first;
+
+        self.heap[get_car_index(first)] = Object::Number(Instruction::Halt as u64);
+        self.heap[get_cdr_index(first)] = ZERO;
+        self.heap[get_tag_index(first)] = PAIR_TAG;
     }
 
     pub fn run(&mut self) {
