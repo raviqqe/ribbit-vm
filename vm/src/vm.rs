@@ -509,19 +509,16 @@ impl<'a> Vm<'a> {
         let mut name = self.get_nil();
 
         loop {
-            let c = self.read_byte();
-
-            if c == 44 {
-                self.symbol_table = self.create_symbol(name);
-                name = self.get_nil();
-                continue;
+            match self.read_byte() {
+                44 => {
+                    self.symbol_table = self.create_symbol(name);
+                    name = self.get_nil();
+                }
+                59 => break,
+                c => {
+                    name = self.allocate_rib(Object::Number(c as u64), name, PAIR_TAG);
+                }
             }
-
-            if c == 59 {
-                break;
-            }
-
-            name = self.allocate_rib(Object::Number(c as u64), name, PAIR_TAG);
         }
 
         self.symbol_table = self.create_symbol(name);
