@@ -377,6 +377,15 @@ impl<'a> Vm<'a> {
         stack
     }
 
+    fn get_tos(&self) -> Object {
+        self.heap[self.get_tos_index()]
+    }
+
+    fn get_tos_mut(&mut self) -> &mut Object {
+        let index = self.get_tos_index();
+        &mut self.heap[index]
+    }
+
     fn operate_primitive(&mut self, primitive: Primitive) {
         #[cfg(feature = "trace")]
         println!("primitive: {}", primitive as usize);
@@ -403,11 +412,10 @@ impl<'a> Vm<'a> {
             }
             Primitive::Close => {
                 // TODO Review this.
-                let x = self.get_car(self.heap[self.get_tos_index()]);
+                let x = self.get_car(self.get_tos());
                 let y = self.get_cdr(self.stack);
 
-                let index = self.get_tos_index();
-                self.heap[index] = self.allocate_rib(x, y, CLOSURE_TAG);
+                *self.get_tos_mut() = self.allocate_rib(x, y, CLOSURE_TAG);
             }
             Primitive::IsRib => {
                 let x = self.pop();
@@ -604,9 +612,8 @@ impl<'a> Vm<'a> {
 
             // TODO Review this.
             let instruction = self.allocate_rib(Object::Number(op as u64), n, ZERO);
-            self.heap[get_tag_index(instruction)] = self.heap[self.get_tos_index()];
-            let index = self.get_tos_index();
-            self.heap[index] = instruction;
+            *self.get_tag_mut(instruction) = self.get_tos();
+            *self.get_tos_mut() = instruction;
         }
 
         self.program_counter = self.get_tag(self.get_car(n));
