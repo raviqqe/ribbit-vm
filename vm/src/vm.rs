@@ -145,6 +145,7 @@ impl<'a> Vm<'a> {
 
                         let variadic = self.get_car(code).to_raw() & 1 != 0;
 
+                        dbg!(variadic);
                         if (!variadic && parameter_count != argument_count)
                             || (variadic && parameter_count.to_raw() > argument_count.to_raw())
                         {
@@ -155,7 +156,7 @@ impl<'a> Vm<'a> {
                             Object::Number(argument_count.to_raw() - parameter_count.to_raw());
 
                         if variadic {
-                            todo!();
+                            todo!("{}", argument_count.to_raw());
                         }
 
                         for _ in 0..parameter_count.to_raw() {
