@@ -188,12 +188,14 @@ impl<'a> Vm<'a> {
                     self.advance_program_counter();
                 }
                 Instruction::GET => {
-                    self.push(self.get_procedure(), PAIR_TAG);
+                    self.push(
+                        self.get_operand(self.get_cdr(self.program_counter)),
+                        PAIR_TAG,
+                    );
                     self.advance_program_counter();
                 }
                 Instruction::CONSTANT => {
-                    let object = self.get_cdr(self.program_counter);
-                    self.push(object, PAIR_TAG);
+                    self.push(self.get_cdr(self.program_counter), PAIR_TAG);
                     self.advance_program_counter();
                 }
                 Instruction::IF => {
