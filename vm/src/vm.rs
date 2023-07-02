@@ -138,12 +138,15 @@ impl<'a> Vm<'a> {
 
                         self.advance_program_counter();
                     } else {
-                        let parameter_count = self.get_car(code);
+                        debug_assert!(!self.get_car(code).is_rib());
+                        debug_assert!(!argument_count.is_rib());
+
+                        let parameter_info = self.get_car(code).to_raw();
+                        let parameter_count = Object::Number(parameter_info >> 1);
+                        let variadic = parameter_info & 1 != 0;
 
                         let mut stack = self.allocate_rib(ZERO, procedure, PAIR_TAG);
                         *self.get_car_mut(self.program_counter) = code;
-
-                        let variadic = self.get_car(code).to_raw() & 1 != 0;
 
                         if (!variadic && parameter_count != argument_count)
                             || (variadic && parameter_count.to_raw() > argument_count.to_raw())
