@@ -123,6 +123,7 @@ impl<'a> Vm<'a> {
                     let jump = self.get_tag(self.program_counter) == ZERO;
                     let procedure = self.get_procedure();
                     let code = self.get_code();
+                    let argument_count = self.pop();
 
                     if !code.is_rib() {
                         self.operate_primitive(
@@ -137,17 +138,17 @@ impl<'a> Vm<'a> {
 
                         self.advance_program_counter();
                     } else {
-                        let argument_count = self.get_car(self.get_code());
+                        let parameter_count = self.get_car(self.get_code());
                         *self.get_car_mut(self.program_counter) = self.get_code();
 
                         let mut s2 = self.allocate_rib(ZERO, procedure, PAIR_TAG);
 
-                        for _ in 0..argument_count.to_raw() {
+                        for _ in 0..parameter_count.to_raw() {
                             let pop_obj = self.pop();
                             s2 = self.allocate_rib(pop_obj, s2, PAIR_TAG);
                         }
 
-                        let c2 = self.get_list_tail(s2, argument_count);
+                        let c2 = self.get_list_tail(s2, parameter_count);
 
                         if jump {
                             let k = self.get_continuation();
