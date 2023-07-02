@@ -138,10 +138,18 @@ impl<'a> Vm<'a> {
 
                         self.advance_program_counter();
                     } else {
-                        let parameter_count = self.get_car(self.get_code());
-                        *self.get_car_mut(self.program_counter) = self.get_code();
+                        let parameter_count = self.get_car(code);
 
                         let mut s2 = self.allocate_rib(ZERO, procedure, PAIR_TAG);
+                        *self.get_car_mut(self.program_counter) = code;
+
+                        let variadic = self.get_car(code).to_raw() & 1 != 0;
+
+                        if (!variadic && parameter_count != argument_count)
+                            || (variadic && parameter_count.to_raw() > argument_count.to_raw())
+                        {
+                            return Err(Error::ArgumentCount);
+                        }
 
                         for _ in 0..parameter_count.to_raw() {
                             let pop_obj = self.pop();
