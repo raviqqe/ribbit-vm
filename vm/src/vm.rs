@@ -262,10 +262,6 @@ impl<'a> Vm<'a> {
         Object::Rib(allocated.to_raw())
     }
 
-    fn get_tos_index(&self) -> usize {
-        get_car_index(self.stack)
-    }
-
     fn get_rib(&self, index: Object) -> Rib<'_> {
         let index = index.to_raw() as usize;
 
@@ -375,6 +371,10 @@ impl<'a> Vm<'a> {
         }
 
         stack
+    }
+
+    fn get_tos_index(&self) -> usize {
+        get_car_index(self.stack)
     }
 
     fn get_tos(&self) -> Object {
