@@ -123,6 +123,7 @@ impl<'a> Vm<'a> {
                     let jump = self.get_tag(self.program_counter) == ZERO;
                     let procedure = self.get_procedure();
                     let code = self.get_code();
+                    let mut argument_count = self.pop();
 
                     if !code.is_rib() {
                         self.operate_primitive(
@@ -137,32 +138,53 @@ impl<'a> Vm<'a> {
 
                         self.advance_program_counter();
                     } else {
-                        let argument_count = self.get_car(self.get_code());
-                        *self.get_car_mut(self.program_counter) = self.get_code();
+                        debug_assert!(!self.get_car(code).is_rib());
+                        debug_assert!(!argument_count.is_rib());
 
-                        let mut s2 = self.allocate_rib(ZERO, procedure, PAIR_TAG);
+                        let parameter_info = self.get_car(code).to_raw();
+                        let parameter_count = Object::Number(parameter_info >> 1);
+                        let variadic = parameter_info & 1 != 0;
 
-                        for _ in 0..argument_count.to_raw() {
-                            let pop_obj = self.pop();
-                            s2 = self.allocate_rib(pop_obj, s2, PAIR_TAG);
+                        let mut stack = self.allocate_rib(ZERO, procedure, PAIR_TAG);
+                        *self.get_car_mut(self.program_counter) = code;
+
+                        if (!variadic && parameter_count != argument_count)
+                            || (variadic && parameter_count.to_raw() > argument_count.to_raw())
+                        {
+                            return Err(Error::ArgumentCount);
                         }
 
-                        let c2 = self.get_list_tail(s2, argument_count);
+                        argument_count =
+                            Object::Number(argument_count.to_raw() - parameter_count.to_raw());
+
+                        if variadic {
+                            todo!("{}", argument_count.to_raw());
+                        }
+
+                        for _ in 0..parameter_count.to_raw() {
+                            let argument = self.pop();
+                            stack = self.allocate_rib(argument, stack, PAIR_TAG);
+                        }
+
+                        let c2 = self.get_list_tail(
+                            stack,
+                            Object::Number(parameter_count.to_raw() + if variadic { 1 } else { 0 }),
+                        );
 
                         if jump {
-                            let k = self.get_continuation();
-                            *self.get_car_mut(c2) = self.get_car(k);
-                            *self.get_tag_mut(c2) = self.get_tag(k);
+                            let continuation = self.get_continuation();
+                            *self.get_car_mut(c2) = self.get_car(continuation);
+                            *self.get_tag_mut(c2) = self.get_tag(continuation);
                         } else {
                             *self.get_car_mut(c2) = self.stack;
                             *self.get_tag_mut(c2) = self.get_tag(self.program_counter);
                         }
 
-                        self.stack = s2;
+                        self.stack = stack;
 
-                        let new_pc = self.get_car(self.program_counter);
+                        let next_counter = self.get_car(self.program_counter);
                         *self.get_car_mut(self.program_counter) = instruction;
-                        self.program_counter = self.get_tag(new_pc);
+                        self.program_counter = self.get_tag(next_counter);
                     }
                 }
                 Instruction::SET => {
@@ -179,12 +201,14 @@ impl<'a> Vm<'a> {
                     self.advance_program_counter();
                 }
                 Instruction::GET => {
-                    self.push(self.get_procedure(), PAIR_TAG);
+                    self.push(
+                        self.get_operand(self.get_cdr(self.program_counter)),
+                        PAIR_TAG,
+                    );
                     self.advance_program_counter();
                 }
                 Instruction::CONSTANT => {
-                    let object = self.get_cdr(self.program_counter);
-                    self.push(object, PAIR_TAG);
+                    self.push(self.get_cdr(self.program_counter), PAIR_TAG);
                     self.advance_program_counter();
                 }
                 Instruction::IF => {
@@ -479,9 +503,7 @@ impl<'a> Vm<'a> {
         let x = self.pop().to_raw();
         let y = self.pop().to_raw();
 
-        let condition = self.get_boolean(operate(x, y));
-
-        self.push(condition, PAIR_TAG);
+        self.push(self.get_boolean(operate(x, y)), PAIR_TAG);
     }
 
     // Garbage collection

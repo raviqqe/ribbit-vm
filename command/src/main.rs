@@ -13,6 +13,7 @@ fn main() {
     if let Err(error) = Vm::new(input.trim().as_bytes()).run() {
         exit(match error {
             Error::IllegalInstruction | Error::IllegalPrimitive => 6,
+            _ => 1,
         })
     }
 }
