@@ -384,9 +384,9 @@ impl<'a> Vm<'a> {
         match primitive {
             Primitive::Rib => {
                 let rib = self.allocate_rib(ZERO, ZERO, ZERO);
-                self.heap[get_car_index(rib)] = self.pop();
-                self.heap[get_cdr_index(rib)] = self.pop();
-                self.heap[get_tag_index(rib)] = self.pop();
+                *self.get_car_mut(rib) = self.pop();
+                *self.get_cdr_mut(rib) = self.pop();
+                *self.get_tag_mut(rib) = self.pop();
                 self.push(rib, PAIR_TAG);
             }
             Primitive::Id => {
