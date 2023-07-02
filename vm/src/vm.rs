@@ -138,6 +138,7 @@ impl<'a> Vm<'a> {
                 Instruction::HALT => return Ok(()),
                 Instruction::APPLY => {
                     let jump = self.get_tag(self.program_counter) == ZERO;
+                    let procedure = self.get_procedure();
                     let code = self.get_code();
 
                     if !code.is_rib() {
@@ -156,7 +157,6 @@ impl<'a> Vm<'a> {
                         let argument_count = self.get_car(self.get_code());
                         *self.get_car_mut(self.program_counter) = self.get_code();
 
-                        let procedure = self.get_procedure();
                         let mut s2 = self.allocate_rib(ZERO, procedure, PAIR_TAG);
 
                         for _ in 0..argument_count.to_raw() {
@@ -168,11 +168,11 @@ impl<'a> Vm<'a> {
 
                         if jump {
                             let k = self.get_continuation();
-                            self.heap[get_car_index(c2)] = self.get_car(k);
-                            self.heap[get_tag_index(c2)] = self.get_tag(k);
+                            *self.get_car_mut(c2) = self.get_car(k);
+                            *self.get_tag_mut(c2) = self.get_tag(k);
                         } else {
-                            self.heap[get_car_index(c2)] = self.stack;
-                            self.heap[get_tag_index(c2)] = self.get_tag(self.program_counter);
+                            *self.get_car_mut(c2) = self.stack;
+                            *self.get_tag_mut(c2) = self.get_tag(self.program_counter);
                         }
 
                         self.stack = s2;
@@ -255,7 +255,7 @@ impl<'a> Vm<'a> {
         let stack = self.get_cdr(self.stack);
         let allocated = self.stack;
 
-        self.heap[get_cdr_index(allocated)] = cdr;
+        *self.get_cdr_mut(allocated) = cdr;
 
         self.stack = stack;
 
@@ -436,19 +436,19 @@ impl<'a> Vm<'a> {
             Primitive::SetField0 => {
                 let x = self.pop();
                 let y = self.pop();
-                self.heap[get_car_index(x)] = y;
+                *self.get_car_mut(x) = y;
                 self.push(y, PAIR_TAG);
             }
             Primitive::SetField1 => {
                 let x = self.pop();
                 let y = self.pop();
-                self.heap[get_cdr_index(x)] = y;
+                *self.get_cdr_mut(x) = y;
                 self.push(y, PAIR_TAG);
             }
             Primitive::SetField2 => {
                 let x = self.pop();
                 let y = self.pop();
-                self.heap[get_tag_index(x)] = y;
+                *self.get_tag_mut(x) = y;
                 self.push(y, PAIR_TAG);
             }
             Primitive::Equal => {
