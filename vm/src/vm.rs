@@ -29,23 +29,6 @@ const SYMBOL_TAG: Object = Object::Number(2);
 const STRING_TAG: Object = Object::Number(3);
 const SINGLETON_TAG: Object = Object::Number(5);
 
-fn get_rib_index(index: Object, field: usize) -> usize {
-    // TODO Check this conversion
-    (index.to_raw() + field as u64).try_into().unwrap()
-}
-
-fn get_car_index(index: Object) -> usize {
-    get_rib_index(index, 0)
-}
-
-fn get_cdr_index(index: Object) -> usize {
-    get_rib_index(index, 1)
-}
-
-fn get_tag_index(index: Object) -> usize {
-    get_rib_index(index, 2)
-}
-
 pub struct Vm<'a> {
     // Roots
     stack: Object,
@@ -138,6 +121,7 @@ impl<'a> Vm<'a> {
                 Instruction::HALT => return Ok(()),
                 Instruction::APPLY => {
                     let jump = self.get_tag(self.program_counter) == ZERO;
+                    let procedure = self.get_procedure();
                     let code = self.get_code();
 
                     if !code.is_rib() {
@@ -148,17 +132,14 @@ impl<'a> Vm<'a> {
 
                         if jump {
                             self.program_counter = self.get_continuation();
-                            self.heap[get_cdr_index(self.stack)] =
-                                self.get_car(self.program_counter);
+                            *self.get_cdr_mut(self.stack) = self.get_car(self.program_counter);
                         }
 
                         self.advance_program_counter();
                     } else {
-                        let code_object = self.get_code();
-                        let argument_count = self.get_car(code_object);
-                        self.heap[get_car_index(self.program_counter)] = self.get_code();
+                        let argument_count = self.get_car(self.get_code());
+                        *self.get_car_mut(self.program_counter) = self.get_code();
 
-                        let procedure = self.get_procedure();
                         let mut s2 = self.allocate_rib(ZERO, procedure, PAIR_TAG);
 
                         for _ in 0..argument_count.to_raw() {
@@ -170,17 +151,17 @@ impl<'a> Vm<'a> {
 
                         if jump {
                             let k = self.get_continuation();
-                            self.heap[get_car_index(c2)] = self.get_car(k);
-                            self.heap[get_tag_index(c2)] = self.get_tag(k);
+                            *self.get_car_mut(c2) = self.get_car(k);
+                            *self.get_tag_mut(c2) = self.get_tag(k);
                         } else {
-                            self.heap[get_car_index(c2)] = self.stack;
-                            self.heap[get_tag_index(c2)] = self.get_tag(self.program_counter);
+                            *self.get_car_mut(c2) = self.stack;
+                            *self.get_tag_mut(c2) = self.get_tag(self.program_counter);
                         }
 
                         self.stack = s2;
 
                         let new_pc = self.get_car(self.program_counter);
-                        self.heap[get_car_index(self.program_counter)] = instruction;
+                        *self.get_car_mut(self.program_counter) = instruction;
                         self.program_counter = self.get_tag(new_pc);
                     }
                 }
@@ -193,7 +174,7 @@ impl<'a> Vm<'a> {
                         self.get_cdr(self.program_counter)
                     };
 
-                    self.heap[get_car_index(rib)] = x;
+                    *self.get_car_mut(rib) = x;
 
                     self.advance_program_counter();
                 }
@@ -244,12 +225,12 @@ impl<'a> Vm<'a> {
         let stack = self.get_cdr(self.stack);
         let allocated = self.stack;
 
-        self.heap[get_cdr_index(allocated)] = self.heap[get_tag_index(allocated)];
-        self.heap[get_tag_index(allocated)] = tag;
+        *self.get_cdr_mut(allocated) = self.get_tag(allocated);
+        *self.get_tag_mut(allocated) = tag;
 
         self.stack = stack;
 
-        Object::Rib(allocated.to_raw())
+        allocated
     }
 
     fn allocate_rib2(&mut self, car: Object, cdr: Object, tag: Object) -> Object {
@@ -257,15 +238,11 @@ impl<'a> Vm<'a> {
         let stack = self.get_cdr(self.stack);
         let allocated = self.stack;
 
-        self.heap[get_cdr_index(allocated)] = cdr;
+        *self.get_cdr_mut(allocated) = cdr;
 
         self.stack = stack;
 
-        Object::Rib(allocated.to_raw())
-    }
-
-    fn get_tos_index(&self) -> usize {
-        get_car_index(self.stack)
+        allocated
     }
 
     fn get_rib(&self, index: Object) -> Rib<'_> {
@@ -343,13 +320,13 @@ impl<'a> Vm<'a> {
         if index.to_raw() == 0 {
             list
         } else {
-            let rib = self.get_rib(list);
-            self.get_list_tail(rib.cdr(), Object::Number(index.to_raw() - 1))
+            self.get_list_tail(self.get_cdr(list), Object::Number(index.to_raw() - 1))
         }
     }
 
     fn get_symbol_ref(&self, index: Object) -> Object {
-        self.get_list_tail(self.symbol_table, index)
+        self.get_rib(self.get_list_tail(self.symbol_table, index))
+            .car()
     }
 
     fn get_operand(&self, object: Object) -> Object {
@@ -379,6 +356,19 @@ impl<'a> Vm<'a> {
         stack
     }
 
+    fn get_tos_index(&self) -> usize {
+        self.stack.to_raw() as usize
+    }
+
+    fn get_tos(&self) -> Object {
+        self.heap[self.get_tos_index()]
+    }
+
+    fn get_tos_mut(&mut self) -> &mut Object {
+        let index = self.get_tos_index();
+        &mut self.heap[index]
+    }
+
     fn operate_primitive(&mut self, primitive: Primitive) {
         #[cfg(feature = "trace")]
         println!("primitive: {}", primitive as usize);
@@ -386,9 +376,9 @@ impl<'a> Vm<'a> {
         match primitive {
             Primitive::Rib => {
                 let rib = self.allocate_rib(ZERO, ZERO, ZERO);
-                self.heap[get_car_index(rib)] = self.pop();
-                self.heap[get_cdr_index(rib)] = self.pop();
-                self.heap[get_tag_index(rib)] = self.pop();
+                *self.get_car_mut(rib) = self.pop();
+                *self.get_cdr_mut(rib) = self.pop();
+                *self.get_tag_mut(rib) = self.pop();
                 self.push(rib, PAIR_TAG);
             }
             Primitive::Id => {
@@ -405,11 +395,10 @@ impl<'a> Vm<'a> {
             }
             Primitive::Close => {
                 // TODO Review this.
-                let x = self.get_car(self.heap[self.get_tos_index()]);
+                let x = self.get_car(self.get_tos());
                 let y = self.get_cdr(self.stack);
 
-                let index = self.get_tos_index();
-                self.heap[index] = self.allocate_rib(x, y, CLOSURE_TAG);
+                *self.get_tos_mut() = self.allocate_rib(x, y, CLOSURE_TAG);
             }
             Primitive::IsRib => {
                 let x = self.pop();
@@ -430,19 +419,19 @@ impl<'a> Vm<'a> {
             Primitive::SetField0 => {
                 let x = self.pop();
                 let y = self.pop();
-                self.heap[get_car_index(x)] = y;
+                *self.get_car_mut(x) = y;
                 self.push(y, PAIR_TAG);
             }
             Primitive::SetField1 => {
                 let x = self.pop();
                 let y = self.pop();
-                self.heap[get_cdr_index(x)] = y;
+                *self.get_cdr_mut(x) = y;
                 self.push(y, PAIR_TAG);
             }
             Primitive::SetField2 => {
                 let x = self.pop();
                 let y = self.pop();
-                self.heap[get_tag_index(x)] = y;
+                *self.get_tag_mut(x) = y;
                 self.push(y, PAIR_TAG);
             }
             Primitive::Equal => {
@@ -606,9 +595,8 @@ impl<'a> Vm<'a> {
 
             // TODO Review this.
             let instruction = self.allocate_rib(Object::Number(op as u64), n, ZERO);
-            self.heap[get_tag_index(instruction)] = self.heap[self.get_tos_index()];
-            let index = self.get_tos_index();
-            self.heap[index] = instruction;
+            *self.get_tag_mut(instruction) = self.get_tos();
+            *self.get_tos_mut() = instruction;
         }
 
         self.program_counter = self.get_tag(self.get_car(n));
