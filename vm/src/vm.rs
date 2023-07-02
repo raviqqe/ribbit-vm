@@ -123,7 +123,7 @@ impl<'a> Vm<'a> {
                     let jump = self.get_tag(self.program_counter) == ZERO;
                     let procedure = self.get_procedure();
                     let code = self.get_code();
-                    let argument_count = self.pop();
+                    let mut argument_count = self.pop();
 
                     if !code.is_rib() {
                         self.operate_primitive(
@@ -140,7 +140,7 @@ impl<'a> Vm<'a> {
                     } else {
                         let parameter_count = self.get_car(code);
 
-                        let mut s2 = self.allocate_rib(ZERO, procedure, PAIR_TAG);
+                        let mut stack = self.allocate_rib(ZERO, procedure, PAIR_TAG);
                         *self.get_car_mut(self.program_counter) = code;
 
                         let variadic = self.get_car(code).to_raw() & 1 != 0;
@@ -151,12 +151,19 @@ impl<'a> Vm<'a> {
                             return Err(Error::ArgumentCount);
                         }
 
-                        for _ in 0..parameter_count.to_raw() {
-                            let pop_obj = self.pop();
-                            s2 = self.allocate_rib(pop_obj, s2, PAIR_TAG);
+                        argument_count =
+                            Object::Number(argument_count.to_raw() - parameter_count.to_raw());
+
+                        if variadic {
+                            todo!();
                         }
 
-                        let c2 = self.get_list_tail(s2, parameter_count);
+                        for _ in 0..parameter_count.to_raw() {
+                            let argument = self.pop();
+                            stack = self.allocate_rib(argument, stack, PAIR_TAG);
+                        }
+
+                        let c2 = self.get_list_tail(stack, parameter_count);
 
                         if jump {
                             let k = self.get_continuation();
@@ -167,11 +174,11 @@ impl<'a> Vm<'a> {
                             *self.get_tag_mut(c2) = self.get_tag(self.program_counter);
                         }
 
-                        self.stack = s2;
+                        self.stack = stack;
 
-                        let new_pc = self.get_car(self.program_counter);
+                        let next_counter = self.get_car(self.program_counter);
                         *self.get_car_mut(self.program_counter) = instruction;
-                        self.program_counter = self.get_tag(new_pc);
+                        self.program_counter = self.get_tag(next_counter);
                     }
                 }
                 Instruction::SET => {
