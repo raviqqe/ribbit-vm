@@ -29,23 +29,6 @@ const SYMBOL_TAG: Object = Object::Number(2);
 const STRING_TAG: Object = Object::Number(3);
 const SINGLETON_TAG: Object = Object::Number(5);
 
-fn get_rib_index(index: Object, field: usize) -> usize {
-    // TODO Check this conversion
-    (index.to_raw() + field as u64).try_into().unwrap()
-}
-
-fn get_car_index(index: Object) -> usize {
-    get_rib_index(index, 0)
-}
-
-fn get_cdr_index(index: Object) -> usize {
-    get_rib_index(index, 1)
-}
-
-fn get_tag_index(index: Object) -> usize {
-    get_rib_index(index, 2)
-}
-
 pub struct Vm<'a> {
     // Roots
     stack: Object,
@@ -178,7 +161,7 @@ impl<'a> Vm<'a> {
                         self.stack = s2;
 
                         let new_pc = self.get_car(self.program_counter);
-                        self.heap[get_car_index(self.program_counter)] = instruction;
+                        *self.get_car_mut(self.program_counter) = instruction;
                         self.program_counter = self.get_tag(new_pc);
                     }
                 }
@@ -191,7 +174,7 @@ impl<'a> Vm<'a> {
                         self.get_cdr(self.program_counter)
                     };
 
-                    self.heap[get_car_index(rib)] = x;
+                    *self.get_car_mut(rib) = x;
 
                     self.advance_program_counter();
                 }
@@ -374,7 +357,7 @@ impl<'a> Vm<'a> {
     }
 
     fn get_tos_index(&self) -> usize {
-        get_car_index(self.stack)
+        self.stack.to_raw() as usize
     }
 
     fn get_tos(&self) -> Object {
