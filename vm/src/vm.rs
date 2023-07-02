@@ -242,12 +242,12 @@ impl<'a> Vm<'a> {
         let stack = self.get_cdr(self.stack);
         let allocated = self.stack;
 
-        self.heap[get_cdr_index(allocated)] = self.heap[get_tag_index(allocated)];
-        self.heap[get_tag_index(allocated)] = tag;
+        *self.get_cdr_mut(allocated) = self.get_tag(allocated);
+        *self.get_tag_mut(allocated) = tag;
 
         self.stack = stack;
 
-        Object::Rib(allocated.to_raw())
+        allocated
     }
 
     fn allocate_rib2(&mut self, car: Object, cdr: Object, tag: Object) -> Object {
@@ -259,7 +259,7 @@ impl<'a> Vm<'a> {
 
         self.stack = stack;
 
-        Object::Rib(allocated.to_raw())
+        allocated
     }
 
     fn get_rib(&self, index: Object) -> Rib<'_> {
