@@ -163,7 +163,10 @@ impl<'a> Vm<'a> {
                             stack = self.allocate_rib(argument, stack, PAIR_TAG);
                         }
 
-                        let c2 = self.get_list_tail(stack, parameter_count);
+                        let c2 = self.get_list_tail(
+                            stack,
+                            Object::Number(parameter_count.to_raw() + if variadic { 1 } else { 0 }),
+                        );
 
                         if jump {
                             let continuation = self.get_continuation();
