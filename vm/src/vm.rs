@@ -337,8 +337,7 @@ impl<'a> Vm<'a> {
         if index.to_raw() == 0 {
             list
         } else {
-            let rib = self.get_rib(list);
-            self.get_list_tail(rib.cdr(), Object::Number(index.to_raw() - 1))
+            self.get_list_tail(self.get_cdr(list), Object::Number(index.to_raw() - 1))
         }
     }
 
