@@ -166,9 +166,9 @@ impl<'a> Vm<'a> {
                         let c2 = self.get_list_tail(stack, parameter_count);
 
                         if jump {
-                            let k = self.get_continuation();
-                            *self.get_car_mut(c2) = self.get_car(k);
-                            *self.get_tag_mut(c2) = self.get_tag(k);
+                            let continuation = self.get_continuation();
+                            *self.get_car_mut(c2) = self.get_car(continuation);
+                            *self.get_tag_mut(c2) = self.get_tag(continuation);
                         } else {
                             *self.get_car_mut(c2) = self.stack;
                             *self.get_tag_mut(c2) = self.get_tag(self.program_counter);
