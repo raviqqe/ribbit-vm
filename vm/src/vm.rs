@@ -479,9 +479,7 @@ impl<'a> Vm<'a> {
         let x = self.pop().to_raw();
         let y = self.pop().to_raw();
 
-        let condition = self.get_boolean(operate(x, y));
-
-        self.push(condition, PAIR_TAG);
+        self.push(self.get_boolean(operate(x, y)), PAIR_TAG);
     }
 
     // Garbage collection
