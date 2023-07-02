@@ -343,7 +343,8 @@ impl<'a> Vm<'a> {
     }
 
     fn get_symbol_ref(&self, index: Object) -> Object {
-        self.get_list_tail(self.symbol_table, index)
+        self.get_rib(self.get_list_tail(self.symbol_table, index))
+            .car()
     }
 
     fn get_operand(&self, object: Object) -> Object {
