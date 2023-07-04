@@ -373,7 +373,7 @@ impl<'a> Vm<'a> {
     fn get_continuation(&self) -> Object {
         let mut stack = self.stack;
 
-        while self.get_tag(stack).to_raw() != 0 {
+        while self.get_tag(stack).to_raw() == 0 {
             stack = self.get_cdr(stack);
         }
 
