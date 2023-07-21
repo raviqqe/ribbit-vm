@@ -8,4 +8,4 @@ trace = []
 
 [dependencies]
 num-derive = "0.4.0"
-num-traits = "0.2.15"
+num-traits = "0.2.16"
