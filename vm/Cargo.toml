@@ -7,5 +7,5 @@ edition = "2021"
 trace = []
 
 [dependencies]
-num-derive = "0.4.0"
+num-derive = "0.4.1"
 num-traits = "0.2.17"
