@@ -5,7 +5,7 @@ fn main() {
     let input = match read_to_string(args().nth(1).expect("command line argument")) {
         Ok(input) => input,
         Err(error) => {
-            eprintln!("{}", error);
+            eprintln!("{error}");
             return;
         }
     };
